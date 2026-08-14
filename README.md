@@ -73,7 +73,7 @@ run `brew update && brew upgrade --cask <name>`.
 `optcgsim` has no `livecheck` — the app ships via Dropbox/Google Drive, not a
 GitHub release, so `add-cask.sh` can't drive it. Run
 `./scripts/update-optcgsim.sh --dry-run` first, then the script without flags
-(see `.opencode/skills/update-optcgsim/SKILL.md` for the full workflow).
+(see `.agents/skills/update-optcgsim/SKILL.md` for the full workflow).
 
 ## CI
 
