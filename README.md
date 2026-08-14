@@ -32,6 +32,7 @@ brew uninstall --cask --zap achembarpu/apps/<name>
 | Cask | What | Notes |
 | --- | --- | --- |
 | `localvoxtral` | Realtime, fully local dictation menu-bar app (Apple Silicon, macOS 15+) | Releases are ad-hoc signed, not notarized; the cask clears quarantine and re-signs in `postflight`. |
+| `optcgsim` | Unofficial practice tool for the One Piece Card Game (universal Mac build) | Ad-hoc signed, not notarized; the cask clears quarantine and re-signs in `postflight`. Pins the site's base build (1.42b); newer versions arrive via the in-app auto-patcher. |
 
 ## Adding a cask
 
@@ -66,6 +67,13 @@ Manual alternative: copy an existing `Casks/*.rb`, set `version`, `sha256`
 This rewrites `version`, `sha256`, and `url` in place, keeping your `desc`,
 `zap`, and `caveats`. Then `brew style`, `brew audit`, commit, push — clients
 run `brew update && brew upgrade --cask <name>`.
+
+### Updating `optcgsim`
+
+`optcgsim` has no `livecheck` — the app ships via Dropbox/Google Drive, not a
+GitHub release, so `add-cask.sh` can't drive it. Run
+`./scripts/update-optcgsim.sh --dry-run` first, then the script without flags
+(see `.opencode/skills/update-optcgsim/SKILL.md` for the full workflow).
 
 ## CI
 
