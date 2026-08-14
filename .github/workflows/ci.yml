@@ -1,0 +1,40 @@
+name: cask-lint
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: macos-15
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: "1"
+      HOMEBREW_NO_ENV_HINTS: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: brew style (all casks)
+        run: brew style Casks/*.rb
+
+      - name: brew audit (changed casks)
+        run: |
+          set -euo pipefail
+          brew tap achembarpu/apps "$PWD"
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            base="${{ github.event.pull_request.base.sha }}"
+          else
+            base="${{ github.event.before }}"
+          fi
+          if [ "$base" = "0000000000000000000000000000000000000000" ]; then
+            changed="$(ls Casks/*.rb 2>/dev/null || true)"
+          else
+            changed="$(git diff --name-only "$base" HEAD -- Casks 2>/dev/null || true)"
+          fi
+          fail=0
+          for f in $changed; do
+            name="$(basename "$f" .rb)"
+            echo "==> brew audit --cask achembarpu/apps/$name"
+            brew audit --cask "achembarpu/apps/$name" || fail=1
+          done
+          exit $fail
