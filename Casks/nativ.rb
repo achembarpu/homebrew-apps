@@ -8,10 +8,11 @@ cask "nativ" do
   homepage "https://github.com/Blaizzy/nativ"
 
   livecheck do
-    url "https://github.com/Blaizzy/nativ/releases/latest"
+    url :url
     strategy :github_latest
   end
 
+  auto_updates true
   depends_on macos: :tahoe
   depends_on arch: :arm64
 
@@ -40,5 +41,9 @@ cask "nativ" do
     Models download to the Hugging Face cache (~/.cache/huggingface/hub by
     default, or wherever HF_HUB_CACHE/HF_HOME points). The cask's zap does not
     delete that shared cache.
+
+    Nativ self-updates in-app via Sparkle; when it does, `brew upgrade --cask
+    nativ` will not move you past the version pinned here until this cask is
+    bumped.
   EOS
 end
