@@ -1,6 +1,6 @@
 cask "optcgsim" do
-  version "1.42b"
-  sha256 "da9919d38255920a33c956b1d4f2db7b4887dd91ba46f4e74fba58677457264d"
+  version "1.42c"
+  sha256 "acae86f45c3930076aadf4ad4b00f33bdc1bcfa9f00378ee47fa34e54e458841"
 
   url "https://www.dropbox.com/scl/fi/te0z476tf5wamm827fnm8/1_#{version.tr(".", "_")}_Mac.zip?rlkey=laxvcq3xzof78lzijeprxh12y&st=95sfxiex&dl=1",
       only_path: "#{version}_Mac"
@@ -40,7 +40,7 @@ cask "optcgsim" do
   ]
 
   caveats <<~EOS
-    The cask pins the site's current Mac build (1.42b), served from the site's
+    The cask pins the site's current Mac build (1.42c), served from the site's
     Dropbox link, which is still named 1_30d_Mac.zip. Since v1.40a the app
     self-updates in-app via its auto-patcher, so newer versions may arrive
     without a cask update.

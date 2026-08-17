@@ -32,7 +32,7 @@ brew uninstall --cask --zap achembarpu/apps/<name>
 | Cask | What | Notes |
 | --- | --- | --- |
 | `localvoxtral` | Realtime, fully local dictation menu-bar app (Apple Silicon, macOS 15+) | Releases are ad-hoc signed, not notarized; the cask clears quarantine and re-signs in `postflight`. |
-| `optcgsim` | Unofficial practice tool for the One Piece Card Game (universal Mac build) | Ad-hoc signed, not notarized; the cask clears quarantine and re-signs in `postflight`. Pins the site's base build (1.42b); newer versions arrive via the in-app auto-patcher. |
+| `optcgsim` | Unofficial practice tool for the One Piece Card Game (universal Mac build) | Ad-hoc signed, not notarized; the cask clears quarantine and re-signs in `postflight`. Pins the site's base build (1.42c); newer versions arrive via the in-app auto-patcher. |
 
 ## Adding a cask
 

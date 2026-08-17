@@ -54,7 +54,7 @@ whether the download really matches (the binary truth-check).
 ## Gotchas
 
 - The Dropbox URL's filename segment is vestigial: the site's Mac link may
-  say `1_30d_Mac.zip` while the zip actually holds the 1.42b build. NEVER
+  say `1_30d_Mac.zip` while the zip actually holds the 1.42c build. NEVER
   read the version from the URL filename.
 - The RSS feed (https://optcgsim.com/feed/) is the version authority — the
   newest post title, first token matching `[0-9]+\.[0-9]+[a-z]*`.
