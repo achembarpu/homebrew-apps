@@ -16,6 +16,13 @@ binaries.
   ship a `postflight` that clears quarantine and re-signs locally (`xattr -cr`
   then `codesign --force --deep --sign -`) — `scripts/add-cask.sh --re-sign`
   emits this. If an app needs signing magic you can't explain, don't add it.
+- The reverse holds too: NEVER add the re-sign `postflight` to an app that
+  ships a valid Developer ID signature + notarization. Re-signing strips the
+  real signature and breaks library validation for bundled runtimes (this is
+  how the official jetbrains-junie formula corrupted Junie: brew rewrote the
+  bundled JRE dylibs and ad-hoc re-signed them, so the launcher refused to
+  load them). `codesign --verify --deep --strict` on the installed app is
+  the gate.
 - Add a `zap trash:` list for any app that stores data, and `caveats` for
   permission gotchas (e.g. a silently-dropped Accessibility grant after
   updates).
@@ -49,6 +56,28 @@ brew style Casks/<name>.rb
 brew audit --cask achembarpu/apps/<name>   # tap must be tapped: brew tap achembarpu/apps
 ```
 
+Test the real install path AFTER committing and pushing. Never substitute a
+hand-unzipped copy in /tmp for this: it tests bytes brew does not ship and
+proves nothing about the cask. Downloading an artifact to compute its
+`sha256` (see hard rules) is fine — that is forensics, not the test.
+
+1. Push, then refresh the local tap clone. `brew update` updates every tap
+   including this one, so no manual `git pull` is needed. Immediately after
+   a push, prefer the targeted
+   `git -C "$(brew --repository achembarpu/apps)" pull --ff-only`: brew's
+   automatic pre-install update is skipped inside its freshness window
+   (`HOMEBREW_AUTO_UPDATE_SECS`, default 24h) and may leave the new cask
+   invisible ("Cask ... is unavailable").
+2. `brew audit --cask achembarpu/apps/<name>`
+3. `brew install --cask achembarpu/apps/<name>` — exercises the pinned
+   sha256 check, staging, `app` move, and `binary` link end to end.
+4. Verify the INSTALLED app, not the downloaded zip: run deep-strict
+   `codesign --verify --deep --strict` on the moved `.app` (spot-check a
+   bundled binary's TeamIdentifier when signing matters), `which <binary>`,
+   and run `<binary> --version`.
+5. Clean up scratch files; leave no zip dumps or extracted trees behind in
+   `$TMPDIR`.
+
 Full option reference: `./scripts/add-cask.sh --help`.
 
 ## Conventions
@@ -59,6 +88,8 @@ Full option reference: `./scripts/add-cask.sh --help`.
 - `desc` must start with a capital letter (a style cop).
 - Default `depends_on macos: :sequoia` and `depends_on arch: :arm64` only when
   the app actually requires them; don't guess.
+- If upstream ships separate arm64/amd64 macOS assets, use the `arch` stanza
+  with per-arch `sha256` keys instead of pinning `depends_on arch: :arm64`.
 - Keep the README's cask table in sync when adding a cask.
 
 ## Scope
