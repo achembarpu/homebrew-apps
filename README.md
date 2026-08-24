@@ -47,6 +47,10 @@ The fast path — generate a cask from a GitHub release:
 ./scripts/add-cask.sh <owner>/<repo> --macos sequoia --arch arm64
 ```
 
+Set `GH_TOKEN` (for example `GH_TOKEN="$(gh auth token)"`) and the script
+authenticates its GitHub API calls; anonymous calls share a strict rate limit
+and fail with 403.
+
 Then, by hand if needed: fill in `desc`/`name`, add a `zap trash:` list for
 the app's data directories, and add `caveats`. Validate before committing:
 

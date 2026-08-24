@@ -39,6 +39,9 @@ Bump an existing cask (keeps `desc`/`zap`/`caveats`):
 ./scripts/add-cask.sh <owner>/<repo> --existing <name>
 ```
 
+Export `GH_TOKEN` (e.g. `$(gh auth token)`) so the script authenticates its
+GitHub API calls; without it you hit anonymous 403 rate limits.
+
 Verify BEFORE committing:
 
 ```bash

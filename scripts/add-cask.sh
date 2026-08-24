@@ -3,8 +3,13 @@ set -euo pipefail
 
 # Generate or update a Homebrew cask in this tap from a GitHub release.
 #   ./scripts/add-cask.sh <owner>/<repo> [options]
+#
 # Prints the cask, writes it to Casks/<name>.rb (unless --no-write), and
 # leaves style/audit verification to you (see README).
+#
+# GitHub API requests are authenticated when GH_TOKEN or GITHUB_TOKEN is set
+# (e.g. GH_TOKEN="$(gh auth token)"). Without a token you share the anonymous
+# per-IP rate limit and will eventually get 403s.
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CASKS_DIR="$ROOT_DIR/Casks"
@@ -33,8 +38,14 @@ Options:
   --force            Overwrite an existing cask file.
   --no-write         Print the generated cask to stdout without writing.
   -h, --help         Show this help.
+
+Environment:
+  GH_TOKEN / GITHUB_TOKEN  Sent as a Bearer token on GitHub API requests;
+                           avoids anonymous rate limits (403s).
 EOF
 }
+
+# --- options ------------------------------------------------------------------
 
 REPO=""
 ASSET=""
@@ -65,7 +76,7 @@ while [[ $# -gt 0 ]]; do
     --archive)    LOCAL_ARCHIVE="${2:?--archive needs a value}"; shift 2 ;;
     --re-sign)    RESIGN=1; shift ;;
     --force)      FORCE=1; shift ;;
-    --no-write)   NO_WRITE=1; shift ;;
+    --no-write)    NO_WRITE=1; shift ;;
     -h|--help)    usage; exit 0 ;;
     -*)           die "unknown option: $1 (see --help)" ;;
     *)            [ -n "$REPO" ] && die "unexpected argument: $1"; REPO="$1"; shift ;;
@@ -73,28 +84,72 @@ while [[ $# -gt 0 ]]; do
 done
 
 [ -n "$REPO" ] || die "missing <owner>/<repo> argument (see --help)"
-[[ "$REPO" == */* ]] || die "repo must be <owner>/<repo>, got: $REPO"
+[[ "$REPO" =~ ^[A-Za-z0-9._-]+/[A-Za-z0-9._-]+$ ]] ||
+  die "repo must be <owner>/<repo>, got: $REPO"
+if [ "$VERSION" != "latest" ]; then
+  [[ "$VERSION" =~ ^[A-Za-z0-9._+-]+$ ]] || die "implausible tag: $VERSION"
+fi
+case "$DESC$NAME_HUMAN" in
+  *'"'*) die "--desc/--name must not contain double quotes" ;;
+esac
 
-# --- resolve release metadata from the GitHub API ---------------------------
-fetch_release_json() {
-  local api_url tmp
-  if [ "$VERSION" = "latest" ]; then
-    api_url="https://api.github.com/repos/${REPO}/releases/latest"
-  else
-    api_url="https://api.github.com/repos/${REPO}/releases/tags/${VERSION}"
-  fi
-  tmp="$(mktemp)"
-  curl -fsSL --retry 3 "$api_url" -o "$tmp" || die "could not fetch release metadata from $api_url"
-  printf '%s\n' "$tmp"
-}
+for tool in curl python3 shasum unzip; do
+  command -v "$tool" >/dev/null 2>&1 || die "required tool not found: $tool"
+done
 
-release_json="$(fetch_release_json)"
-trap 'rm -f "$release_json"' EXIT
+# --- scratch space; one trap cleans everything ---------------------------------
 
-# Prints tab-separated: mode, tag, asset_name, download_url. Dies on failure.
-pick_result="$(python3 - "$release_json" "$ASSET" "$(basename "$REPO")" <<'PY'
+TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/add-cask.XXXXXX")"
+trap 'rm -rf "$TMP_DIR"' EXIT
+RELEASE_JSON="$TMP_DIR/release.json"
+
+# --- fetch release metadata (Bearer-authenticated when a token is set) ---------
+
+TOKEN="${GH_TOKEN:-}"
+[ -n "$TOKEN" ] || TOKEN="${GITHUB_TOKEN:-}"
+
+API_ARGS=(-sS --retry 3 --connect-timeout 15)
+[ -n "$TOKEN" ] && API_ARGS+=(-H "Authorization: Bearer $TOKEN")
+
+if [ "$VERSION" = "latest" ]; then
+  api_url="https://api.github.com/repos/${REPO}/releases/latest"
+else
+  api_url="https://api.github.com/repos/${REPO}/releases/tags/${VERSION}"
+fi
+
+# Deliberately no -f: capture the HTTP status ourselves so failures produce a
+# useful message instead of curl's bare exit code. `|| status=000` rescues
+# transport-level errors from set -e.
+status="$(curl "${API_ARGS[@]}" -o "$RELEASE_JSON" -w '%{http_code}' "$api_url")" || status=000
+case "$status" in
+  200) ;;
+  000) die "could not reach $api_url (network error)" ;;
+  403 | 429)
+    if [ -n "$TOKEN" ]; then
+      die "GitHub API returned $status despite a token (rate limit or revoked token?): $api_url"
+    fi
+    die "GitHub API returned $status (anonymous rate limit). Set GH_TOKEN, e.g.: GH_TOKEN=\"\$(gh auth token)\" $0 $REPO"
+    ;;
+  404) die "release not found: $api_url (check <owner>/<repo> and --version)" ;;
+  *)   die "GitHub API returned HTTP $status: $api_url" ;;
+esac
+
+# --- pick the asset -------------------------------------------------------------
+
+# Prints tab-separated: mode, tag, asset_name, download_url. Reportable
+# failures (MISSING_ASSET / NO_ASSETS) exit 1 with the reason on stdout;
+# unusable metadata exits 2 with the reason on stderr. `|| true` rescues
+# those statuses from set -e; the cases below consume the outcome.
+pick_result="$(python3 - "$RELEASE_JSON" "$ASSET" "$(basename "$REPO")" <<'PY'
 import json, sys
-j = json.load(open(sys.argv[1]))
+
+try:
+    with open(sys.argv[1]) as f:
+        j = json.load(f)
+except Exception as exc:
+    print("could not parse release metadata: %s" % exc, file=sys.stderr)
+    sys.exit(2)
+
 assets = j.get("assets", [])
 want = sys.argv[2]
 repobase = sys.argv[3]
@@ -108,54 +163,53 @@ if want:
         if a["name"] == want:
             emit("EXACT", a["name"], a["browser_download_url"])
             sys.exit(0)
-    print("MISSING_ASSET\t%s\t%s\t%s" % (tag, want, ""))
+    print("MISSING_ASSET\t%s\t%s\t" % (tag, want))
     sys.exit(1)
 
-# dSYM archives are debug symbols, never the app. Upstream once shipped them
-# first in the asset list (install.sh #131); ignore them here the same way.
 def app_zips():
-    return [a for a in assets if a["name"].endswith(".zip") and "dSYM" not in a["name"]]
+    # dSYM archives are debug symbols, never the app. Upstream once shipped
+    # them first in the asset list (install.sh #131); ignore them likewise.
+    return [a for a in assets
+            if a["name"].endswith(".zip") and "dSYM" not in a["name"]]
 
 def dmgs():
     return [a for a in assets if a["name"].endswith(".dmg")]
 
 zips = app_zips()
-dms = dmgs()
+dmgs = dmgs()
+
+def contains_tag(lst):
+    return next((a for a in lst if tag and tag in a["name"]), None)
 
 def exact_match(lst):
     want = "%s-%s.zip" % (repobase, tag)
-    for a in lst:
-        if a["name"].lower() == want.lower():
-            return a
-    return None
+    return next((a for a in lst if a["name"].lower() == want.lower()), None)
 
-def contains_tag(lst):
-    for a in lst:
-        if tag and tag in a["name"]:
-            return a
-    return None
-
-a = exact_match(zips) or contains_tag(zips) or (zips[0] if zips else None) \
-    or contains_tag(dms) or (dms[0] if dms else None)
+a = (exact_match(zips) or contains_tag(zips)
+     or (zips[0] if zips else None)
+     or contains_tag(dmgs) or (dmgs[0] if dmgs else None))
 if not a:
     names = ", ".join(x["name"] for x in assets) or "(release has no assets)"
     print("NO_ASSETS\t%s\t\t%s" % (tag, names))
     sys.exit(1)
 emit("AUTO", a["name"], a["browser_download_url"])
 PY
-)"
-IFS=$'\t' read -r PICK_MODE TAG ASSET_NAME DOWNLOAD_URL <<<"$pick_result"
+)" || true
 
-case "$PICK_MODE" in
-  MISSING_ASSET) die "release '$TAG' has no asset named '$ASSET'. See --help for auto-pick rules." ;;
-  NO_ASSETS)     die "release '$TAG' has no .zip or .dmg assets. Assets: $DOWNLOAD_URL" ;;
+IFS=$'\t' read -r PICK_MODE TAG ASSET_NAME DOWNLOAD_URL <<<"${pick_result:-}"
+
+case "${PICK_MODE:-}" in
+  MISSING_ASSET) die "release '${TAG:-?}' has no asset named '$ASSET'. See --help for auto-pick rules." ;;
+  NO_ASSETS)     die "release '${TAG:-?}' has no .zip or .dmg assets. Assets: $DOWNLOAD_URL" ;;
+  "")            die "could not parse release metadata (see message above, if any)" ;;
 esac
 
-[ -n "$TAG" ]        || die "could not read tag_name from release metadata"
-[ -n "$DOWNLOAD_URL" ] || die "could not resolve download URL for $ASSET_NAME"
+[ -n "$TAG" ]          || die "could not read tag_name from release metadata"
+[ -n "$DOWNLOAD_URL" ] || die "could not resolve download URL for ${ASSET_NAME:-?}"
 
-# --- derive names and download the archive for sha256/app discovery --------
-CASK_NAME="${CASK_NAME:-$(printf '%s' "$(basename "$REPO")" | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9' '-')}"
+# --- derive names, download, hash -----------------------------------------------
+
+CASK_NAME="${CASK_NAME:-$(basename "$REPO" | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9' '-')}"
 CASK_NAME="${CASK_NAME#-}"
 CASK_NAME="${CASK_NAME%-}"
 [[ "$CASK_NAME" =~ ^[a-z0-9-]+$ ]] || die "derived cask name invalid: $CASK_NAME"
@@ -164,46 +218,64 @@ VERSION_VALUE="${TAG#v}"
 NAME_HUMAN="${NAME_HUMAN:-$(basename "$REPO")}"
 HOMEPAGE="https://github.com/${REPO}"
 
-TMP_DIR="$(mktemp -d)"
-trap 'rm -rf "$TMP_DIR"; rm -f "$release_json"' EXIT
+# Tap convention: interpolate #{version} into the cask URL so later bumps via
+# --existing keep working. Substituting the bare version covers both the
+# .../download/v<ver>/ path segment (tags carry a v prefix) and the asset name.
+RUBY_VERSION='#{version}'
+CASK_URL="${DOWNLOAD_URL//"$VERSION_VALUE"/$RUBY_VERSION}"
 
 if [ -n "$LOCAL_ARCHIVE" ]; then
   [ -f "$LOCAL_ARCHIVE" ] || die "archive not found: $LOCAL_ARCHIVE"
   ARCHIVE="$LOCAL_ARCHIVE"
+  ARCHIVE_BASENAME="$(basename "$LOCAL_ARCHIVE")"
 else
   ARCHIVE="$TMP_DIR/$ASSET_NAME"
+  ARCHIVE_BASENAME="$ASSET_NAME"
   printf 'Downloading %s (%s)...\n' "$ASSET_NAME" "$VERSION_VALUE" >&2
-  curl -fL --retry 3 "$DOWNLOAD_URL" -o "$ARCHIVE" || die "download failed: $DOWNLOAD_URL"
+  curl -fsSL --retry 3 "$DOWNLOAD_URL" -o "$ARCHIVE" ||
+    die "download failed: $DOWNLOAD_URL"
 fi
 
 printf 'Computing SHA-256...\n' >&2
-SHA256="$(shasum -a 256 "$ARCHIVE" | awk '{ print $1 }')"
+SHA256="$(shasum -a 256 "$ARCHIVE")"
+SHA256="${SHA256%% *}"
 [[ "$SHA256" =~ ^[[:xdigit:]]{64}$ ]] || die "could not compute sha256 of $ARCHIVE"
 
-# --- discover the .app inside the archive -----------------------------------
+# --- discover the .app inside the archive ----------------------------------------
+
 if [ -n "$APP_OVERRIDE" ]; then
   APP_NAME="$APP_OVERRIDE"
-elif [[ "$ASSET_NAME" == *.dmg ]]; then
-  MOUNT="$(mktemp -d)"
-  hdiutil attach -readonly -nobrowse -mountpoint "$MOUNT" "$ARCHIVE" >/dev/null 2>&1 || die "could not mount $ASSET_NAME"
-  APP_NAME="$(find "$MOUNT" -maxdepth 3 -type d -name '*.app' -print -quit 2>/dev/null | xargs -I{} basename {})"
+elif [[ "$ARCHIVE_BASENAME" == *.dmg ]]; then
+  MOUNT="$TMP_DIR/mnt"
+  mkdir "$MOUNT"
+  hdiutil attach -readonly -nobrowse -mountpoint "$MOUNT" "$ARCHIVE" >/dev/null ||
+    die "could not mount $ARCHIVE_BASENAME"
+  found="$(find "$MOUNT" -maxdepth 3 -type d -name '*.app' -print -quit 2>/dev/null || true)"
   hdiutil detach "$MOUNT" >/dev/null 2>&1 || true
-  rmdir "$MOUNT" 2>/dev/null || true
+  if [ -n "$found" ]; then
+    APP_NAME="$(basename "$found")"
+  else
+    APP_NAME=""
+  fi
 else
   # awk exits after the first .app; unzip then gets SIGPIPE, which pipefail
   # would otherwise turn into a script-killing exit 141. `|| true` absorbs it.
   APP_NAME="$(unzip -Z1 "$ARCHIVE" 2>/dev/null | awk -F/ '$1 ~ /\.app$/ { print $1; exit }' || true)"
 fi
-[ -n "$APP_NAME" ] || die "could not find a .app inside $ASSET_NAME (pass --app '<App.app>')"
+[ -n "$APP_NAME" ] || die "could not find a .app inside $ARCHIVE_BASENAME (pass --app '<App.app>')"
 
-# --- write (or update) the cask file -----------------------------------------
+# --- write (or update) the cask file ----------------------------------------------
+
+# sed replacements treat & and the | delimiter specially; escape both.
+escape_sed_repl() { printf '%s' "$1" | sed -e 's/[&|]/\\&/g'; }
+
 write_cask() {
   local out="$1"
   {
     printf 'cask "%s" do\n' "$CASK_NAME"
     printf '  version "%s"\n' "$VERSION_VALUE"
     printf '  sha256 "%s"\n\n' "$SHA256"
-    printf '  url "%s"\n' "$DOWNLOAD_URL"
+    printf '  url "%s"\n' "$CASK_URL"
     printf '  name "%s"\n' "$NAME_HUMAN"
     [ -n "$DESC" ] && printf '  desc "%s"\n' "$DESC"
     printf '  homepage "%s"\n\n' "$HOMEPAGE"
@@ -238,9 +310,9 @@ if [ -n "$EXISTING" ]; then
   # Exactly-two-space indent keeps these anchored to the top-level stanzas;
   # a bare ` *url "` would also rewrite the livecheck's (4-space) url line.
   sed -i.bak \
-    -e 's|^\(  version "\)[^"]*\("\)|\1'"${VERSION_VALUE}"'\2|' \
-    -e 's|^\(  sha256 "\)[^"]*\("\)|\1'"${SHA256}"'\2|' \
-    -e 's|^\(  url "\)[^"]*\("\)|\1'"${DOWNLOAD_URL}"'\2|' \
+    -e 's|^\(  version "\)[^"]*\("\)|\1'"$(escape_sed_repl "$VERSION_VALUE")"'\2|' \
+    -e 's|^\(  sha256 "\)[^"]*\("\)|\1'"$(escape_sed_repl "$SHA256")"'\2|' \
+    -e 's|^\(  url "\)[^"]*\("\)|\1'"$(escape_sed_repl "$CASK_URL")"'\2|' \
     "$EXISTING_FILE"
   rm -f "${EXISTING_FILE}.bak"
   printf 'Updated %s (version/sha256/url). Re-run brew style + brew audit.\n' "$EXISTING_FILE"
