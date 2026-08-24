@@ -96,5 +96,8 @@ Full option reference: `./scripts/add-cask.sh --help`.
 
 - Casks come from GitHub releases with `.zip` (preferred) or `.dmg` assets.
   No pkg installers, no non-GitHub hosts.
+- Formulas are allowed only as thin wrappers that vendor a vendor-provided
+  script at a pinned revision (see `junie-local`); same contract as casks:
+  pinned `version` + `sha256`, no live fetches, no vendored binaries.
 - Uninstall runs `brew uninstall --cask --zap <name>`; data paths come from
   the cask's `zap`.

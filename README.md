@@ -37,6 +37,12 @@ brew uninstall --cask --zap achembarpu/apps/<name>
 | `nativ` | Local AI workspace for running MLX models natively on Apple silicon (macOS 26+, arm64) | Developer ID signed and notarized; no `postflight` needed. Models download into the shared Hugging Face cache, which `zap` leaves alone. |
 | `optcgsim` | Unofficial practice tool for the One Piece Card Game (universal Mac build) | Ad-hoc signed, not notarized; the cask clears quarantine and re-signs in `postflight`. Pins the site's base build (1.42c); newer versions arrive via the in-app auto-patcher. |
 
+## Formulas
+
+| Formula | What | Notes |
+| --- | --- | --- |
+| `junie-local` | `junie-local-setup` command for the optional local model of the `junie` cask (JetBrains MLX engine + Qwen weights) | Vendored verbatim at a pinned upstream revision — no curl pipes. Upstream hard-gates: Apple M5+, >=40 GB RAM, macOS 26+. Downloads land in ~/.local/share/junie-local, outside brew. |
+
 ## Adding a cask
 
 The fast path — generate a cask from a GitHub release:
