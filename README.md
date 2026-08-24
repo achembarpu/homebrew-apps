@@ -31,6 +31,7 @@ brew uninstall --cask --zap achembarpu/apps/<name>
 
 | Cask | What | Notes |
 | --- | --- | --- |
+| `junie` | JetBrains Junie AI coding agent CLI (Apple Silicon & Intel) | Developer ID signed and notarized; no `postflight` needed. Installs `junie.app` and links the CLI onto PATH. Updates via `brew upgrade`, not the binary's built-in self-updater. |
 | `mdv` | Native Markdown viewer with history, bookmarks, and a TOC sidebar (Apple Silicon, macOS 13+) | Developer-signed, but the release zip's AppleDouble junk files break the signature seal; the cask clears quarantine and re-signs in `postflight`. History lives in a SQLite DB that `zap` removes. |
 | `localvoxtral` | Realtime, fully local dictation menu-bar app (Apple Silicon, macOS 15+) | Releases are ad-hoc signed, not notarized; the cask clears quarantine and re-signs in `postflight`. |
 | `nativ` | Local AI workspace for running MLX models natively on Apple silicon (macOS 26+, arm64) | Developer ID signed and notarized; no `postflight` needed. Models download into the shared Hugging Face cache, which `zap` leaves alone. |
