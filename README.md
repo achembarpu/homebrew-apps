@@ -2,7 +2,7 @@
 
 Personal Homebrew tap for apps and CLI tools that have no official Homebrew package
 (or whose official package you would rather not trust). Every cask and formula here is a thin, pinned wrapper over a
-specific GitHub release: exact `version` + `sha256`, no `:no_check`, no
+specific upstream artifact (normally a GitHub release): exact `version` + `sha256`, no `:no_check`, no
 auto-updating URLs. The cask/formula file is the contract.
 
 ## Install

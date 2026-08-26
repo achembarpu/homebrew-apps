@@ -2,7 +2,7 @@
 
 Personal Homebrew tap for apps and CLI tools without an official Homebrew package. **The cask/formula file is
 the contract**: each cask and formula pins an exact `version` + `sha256` and wraps a
-specific GitHub release asset. No `:no_check`, no rolling URLs, no vendored
+specific upstream artifact (normally a GitHub release asset). No `:no_check`, no rolling URLs, no vendored
 binaries.
 
 ## Hard rules
@@ -96,5 +96,5 @@ Full option reference: `./scripts/add-cask.sh --help`.
 ## Scope
 
 - Casks wrap GUI apps from GitHub releases with `.zip` (preferred) or `.dmg` assets that contain a `.app` bundle. No pkg installers, no non-GitHub hosts.
-- Formulas wrap CLI tools and scripts from GitHub releases (for example `.tgz`, `.tar.gz`, `.zip`, or a vendored install script) that do not contain a `.app` bundle. Each formula pins a GitHub release asset with `version` + `sha256`, no live fetches, no vendored binaries unless the build is from source. Use the GitHub release asset URL, not an external mirror (for example R2 or the npm registry). See `junie-local` for a script wrapper and `prime-agent` for an npm tarball pattern.
+- Formulas wrap CLI tools and scripts that do not contain a `.app` bundle. Each formula pins an upstream artifact with `version` + `sha256`, no live fetches, no vendored binaries unless the build is from source. Use a GitHub release asset where available; the documented exceptions are `junie-local` (a pinned raw upstream script), `optcgsim` (a site-hosted app archive), and `prime-agent` (an npm tarball whose declared dependencies are resolved during the build). See `junie-local` for a script wrapper and `prime-agent` for an npm tarball pattern.
 - Uninstall runs `brew uninstall --cask --zap <name>` for casks (data paths come from the cask's `zap`) and `brew uninstall <name>` for formulae.
