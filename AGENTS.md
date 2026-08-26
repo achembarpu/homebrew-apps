@@ -1,17 +1,17 @@
 # homebrew-apps — agent guide
 
-Personal Homebrew tap for apps without an official cask. **The cask file is
-the contract**: each cask pins an exact `version` + `sha256` and wraps a
+Personal Homebrew tap for apps and CLI tools without an official Homebrew package. **The cask/formula file is
+the contract**: each cask and formula pins an exact `version` + `sha256` and wraps a
 specific GitHub release asset. No `:no_check`, no rolling URLs, no vendored
 binaries.
 
 ## Hard rules
 
-- Every cask MUST pin `version` + `sha256` and MUST point `url` at a real
+- Every cask and formula MUST pin `version` + `sha256` and MUST point `url` at a real
   release asset. Never add `:no_check` or a `live`/rolling URL. If the
   release has no `.sha256` asset, download the artifact and compute the hash
   with `shasum -a 256`.
-- Never vendor or embed an app's binaries here. The cask is a thin wrapper.
+- Never vendor or embed an app's binaries here. Each cask and formula is a thin wrapper.
 - Ad-hoc-signed / un-notarized releases are common and fine, but they MUST
   ship a `postflight` that clears quarantine and re-signs locally (`xattr -cr`
   then `codesign --force --deep --sign -`) — `scripts/add-cask.sh --re-sign`
@@ -26,8 +26,8 @@ binaries.
 - Add a `zap trash:` list for any app that stores data, and `caveats` for
   permission gotchas (e.g. a silently-dropped Accessibility grant after
   updates).
-- CI (`ci.yml`) runs `brew style` on all casks and `brew audit` on changed
-  casks. Do not add `--new` rules there — admission rules (repo notability,
+- CI (`ci.yml`) runs `brew style` on all casks and formulae and `brew audit` on changed
+  casks and formulae. Do not add `--new` rules there — admission rules (repo notability,
   notarization) don't apply to a personal tap.
 
 ## Workflow
@@ -52,8 +52,9 @@ GitHub API calls; without it you hit anonymous 403 rate limits.
 Verify BEFORE committing:
 
 ```bash
-brew style Casks/<name>.rb
+brew style Casks/<name>.rb Formula/<name>.rb
 brew audit --cask achembarpu/apps/<name>   # tap must be tapped: brew tap achembarpu/apps
+brew audit --formula achembarpu/apps/<name>
 ```
 
 Test the real install path AFTER committing and pushing. Never substitute a
@@ -90,14 +91,10 @@ Full option reference: `./scripts/add-cask.sh --help`.
   the app actually requires them; don't guess.
 - If upstream ships separate arm64/amd64 macOS assets, use the `arch` stanza
   with per-arch `sha256` keys instead of pinning `depends_on arch: :arm64`.
-- Keep the README's cask table in sync when adding a cask.
+- Keep the README's cask and formula tables in sync when adding a cask or formula.
 
 ## Scope
 
-- Casks come from GitHub releases with `.zip` (preferred) or `.dmg` assets.
-  No pkg installers, no non-GitHub hosts.
-- Formulas are allowed only as thin wrappers that vendor a vendor-provided
-  script at a pinned revision (see `junie-local`); same contract as casks:
-  pinned `version` + `sha256`, no live fetches, no vendored binaries.
-- Uninstall runs `brew uninstall --cask --zap <name>`; data paths come from
-  the cask's `zap`.
+- Casks wrap GUI apps from GitHub releases with `.zip` (preferred) or `.dmg` assets that contain a `.app` bundle. No pkg installers, no non-GitHub hosts.
+- Formulas wrap CLI tools and scripts from GitHub releases (for example `.tgz`, `.tar.gz`, `.zip`, or a vendored install script) that do not contain a `.app` bundle. Each formula pins a GitHub release asset with `version` + `sha256`, no live fetches, no vendored binaries unless the build is from source. Use the GitHub release asset URL, not an external mirror (for example R2 or the npm registry). See `junie-local` for a script wrapper and `prime-agent` for an npm tarball pattern.
+- Uninstall runs `brew uninstall --cask --zap <name>` for casks (data paths come from the cask's `zap`) and `brew uninstall <name>` for formulae.

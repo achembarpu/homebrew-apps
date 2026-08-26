@@ -1,4 +1,4 @@
-name: cask-lint
+name: lint
 
 on:
   push:
@@ -14,10 +14,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: brew style (all casks)
-        run: brew style Casks/*.rb
+      - name: brew style (all casks and formulae)
+        run: brew style Casks/*.rb Formula/*.rb
 
-      - name: brew audit (changed casks)
+      - name: brew audit (changed casks and formulae)
         run: |
           set -euo pipefail
           brew tap achembarpu/apps "$PWD"
@@ -27,14 +27,21 @@ jobs:
             base="${{ github.event.before }}"
           fi
           if [ "$base" = "0000000000000000000000000000000000000000" ]; then
-            changed="$(ls Casks/*.rb 2>/dev/null || true)"
+            changed_casks="$(ls Casks/*.rb 2>/dev/null || true)"
+            changed_formulae="$(ls Formula/*.rb 2>/dev/null || true)"
           else
-            changed="$(git diff --name-only "$base" HEAD -- Casks 2>/dev/null || true)"
+            changed_casks="$(git diff --name-only "$base" HEAD -- Casks 2>/dev/null || true)"
+            changed_formulae="$(git diff --name-only "$base" HEAD -- Formula 2>/dev/null || true)"
           fi
           fail=0
-          for f in $changed; do
+          for f in $changed_casks; do
             name="$(basename "$f" .rb)"
             echo "==> brew audit --cask achembarpu/apps/$name"
             brew audit --cask "achembarpu/apps/$name" || fail=1
+          done
+          for f in $changed_formulae; do
+            name="$(basename "$f" .rb)"
+            echo "==> brew audit --formula achembarpu/apps/$name"
+            brew audit --formula "achembarpu/apps/$name" || fail=1
           done
           exit $fail

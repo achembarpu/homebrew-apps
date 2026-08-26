@@ -1,30 +1,33 @@
 # homebrew-apps
 
-Personal Homebrew tap for apps that have no official cask (or whose official
-cask you'd rather not trust). Every cask here is a thin, pinned wrapper over a
+Personal Homebrew tap for apps and CLI tools that have no official Homebrew package
+(or whose official package you would rather not trust). Every cask and formula here is a thin, pinned wrapper over a
 specific GitHub release: exact `version` + `sha256`, no `:no_check`, no
-auto-updating URLs. The cask file is the contract.
+auto-updating URLs. The cask/formula file is the contract.
 
 ## Install
 
 ```bash
 brew tap achembarpu/apps
-brew install --cask achembarpu/apps/<name>
+brew install --cask achembarpu/apps/<cask>
+brew install achembarpu/apps/<formula>
 ```
 
-Once tapped, the short form also works: `brew install --cask <name>`.
+Once tapped, the short forms also work: `brew install --cask <cask>` and `brew install <formula>`.
 
 ## Update
 
 ```bash
 brew update
-brew upgrade --cask achembarpu/apps/<name>    # or: brew upgrade --cask <name>
+brew upgrade --cask achembarpu/apps/<cask>    # or: brew upgrade --cask <cask>
+brew upgrade achembarpu/apps/<formula>        # or: brew upgrade <formula>
 ```
 
 ## Uninstall (including app data)
 
 ```bash
-brew uninstall --cask --zap achembarpu/apps/<name>
+brew uninstall --cask --zap achembarpu/apps/<cask>  # casks
+brew uninstall achembarpu/apps/<formula>             # formulae
 ```
 
 ## Available casks
@@ -43,9 +46,9 @@ brew uninstall --cask --zap achembarpu/apps/<name>
 | --- | --- | --- |
 | `junie-local` | `junie-local-setup` command for the optional local model of the `junie` cask (JetBrains MLX engine + Qwen weights) | Vendored verbatim at a pinned upstream revision — no curl pipes. Upstream hard-gates: Apple M5+, >=40 GB RAM, macOS 26+. Downloads land in ~/.local/share/junie-local, outside brew. |
 
-## Adding a cask
+## Adding a cask or formula
 
-The fast path — generate a cask from a GitHub release:
+The fast path for casks — generate a cask from a GitHub release:
 
 ```bash
 ./scripts/add-cask.sh <owner>/<repo>                  # latest release, auto-detected zip/dmg
@@ -68,18 +71,24 @@ brew audit --cask achembarpu/apps/<name>   # requires the tap to be tapped (brew
 
 Full option reference: `./scripts/add-cask.sh --help`.
 
-Manual alternative: copy an existing `Casks/*.rb`, set `version`, `sha256`
+Manual alternative for casks: copy an existing `Casks/*.rb`, set `version`, `sha256`
 (from the release's `.sha256` asset), `url`, and `app "<App.app>"`.
 
-## Bumping a cask's version
+For formulae (CLI tools without a `.app` bundle, for example npm `.tgz` tarballs or install scripts),
+create `Formula/<name>.rb` by hand: pin `url` to the GitHub release asset (not an external mirror),
+set `version` and `sha256` (from `SHA256SUMS` or `shasum -a 256`), add `depends_on` and a `livecheck` if applicable,
+and validate with `brew style Formula/<name>.rb && brew audit --formula achembarpu/apps/<name>`.
+See `Formula/junie-local.rb` for a vendored-script pattern.
+
+## Bumping a cask or formula
 
 ```bash
-./scripts/add-cask.sh <owner>/<repo> --existing <name>
+./scripts/add-cask.sh <owner>/<repo> --existing <name>  # casks
 ```
 
-This rewrites `version`, `sha256`, and `url` in place, keeping your `desc`,
-`zap`, and `caveats`. Then `brew style`, `brew audit`, commit, push — clients
-run `brew update && brew upgrade --cask <name>`.
+This rewrites `version`, `sha256`, and `url` in place for casks, keeping your `desc`,
+`zap`, and `caveats`. For formulae, bump `version`, `sha256`, and `url` by hand.
+Then `brew style`, `brew audit`, commit, push — clients run `brew update && brew upgrade`.
 
 ### Updating `optcgsim`
 
@@ -92,15 +101,15 @@ GitHub release, so `add-cask.sh` can't drive it. Run
 
 `.github/workflows/ci.yml` runs on every push/PR to `main`:
 
-- `brew style Casks/*.rb` — offline, structural (all casks)
-- `brew audit --cask` — only the casks changed in the push/PR
+- `brew style Casks/*.rb Formula/*.rb` — offline, structural (all casks and formulae)
+- `brew audit --cask / --formula` — only the casks and formulae changed in the push/PR
 
 `brew audit`'s `--new` admission rules (repo notability, notarization) do not
 apply to a personal tap; plain audit is the bar here.
 
 ## Notes
 
-- The tap itself is MIT licensed ([LICENSE](LICENSE)); each cask additionally
+- The tap itself is MIT licensed ([LICENSE](LICENSE)); each cask and formula additionally
   inherits its upstream app's license.
 - Ad-hoc-signed / un-notarized releases are common for small apps. Two
   patterns are safe: `--re-sign` (local `xattr -cr` + ad-hoc re-sign in
