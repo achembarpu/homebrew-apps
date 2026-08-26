@@ -1,4 +1,4 @@
-# homebrew-apps
+# homebrew-tap
 
 Personal Homebrew tap for apps and CLI tools that have no official Homebrew package
 (or whose official package you would rather not trust). Every cask and formula here is a thin, pinned wrapper over a
@@ -8,9 +8,9 @@ auto-updating URLs. The cask/formula file is the contract.
 ## Install
 
 ```bash
-brew tap achembarpu/apps
-brew install --cask achembarpu/apps/<cask>
-brew install achembarpu/apps/<formula>
+brew tap achembarpu/tap
+brew install --cask achembarpu/tap/<cask>
+brew install achembarpu/tap/<formula>
 ```
 
 Once tapped, the short forms also work: `brew install --cask <cask>` and `brew install <formula>`.
@@ -19,15 +19,15 @@ Once tapped, the short forms also work: `brew install --cask <cask>` and `brew i
 
 ```bash
 brew update
-brew upgrade --cask achembarpu/apps/<cask>    # or: brew upgrade --cask <cask>
-brew upgrade achembarpu/apps/<formula>        # or: brew upgrade <formula>
+brew upgrade --cask achembarpu/tap/<cask>    # or: brew upgrade --cask <cask>
+brew upgrade achembarpu/tap/<formula>        # or: brew upgrade <formula>
 ```
 
 ## Uninstall
 
 ```bash
-brew uninstall --cask --zap achembarpu/apps/<cask>  # casks, including app data
-brew uninstall achembarpu/apps/<formula>             # formulae
+brew uninstall --cask --zap achembarpu/tap/<cask>  # casks, including app data
+brew uninstall achembarpu/tap/<formula>             # formulae
 ```
 
 Formulae do not support cask-style `zap` cleanup. Remove formula-specific
@@ -72,7 +72,7 @@ the app's data directories, and add `caveats`. Validate before committing:
 
 ```bash
 brew style Casks/<name>.rb
-brew audit --cask achembarpu/apps/<name>   # requires the tap to be tapped (brew tap achembarpu/apps)
+brew audit --cask achembarpu/tap/<name>   # requires the tap to be tapped (brew tap achembarpu/tap)
 ```
 
 Full option reference: `./scripts/add-cask.sh --help`.
@@ -83,7 +83,7 @@ Manual alternative for casks: copy an existing `Casks/*.rb`, set `version`, `sha
 For formulae (CLI tools without a `.app` bundle, for example npm `.tgz` tarballs or install scripts),
 create `Formula/<name>.rb` by hand: pin `url` to the GitHub release asset (not an external mirror),
 set `version` and `sha256` (from `SHA256SUMS` or `shasum -a 256`), add `depends_on` and a `livecheck` if applicable,
-and validate with `brew style Formula/<name>.rb && brew audit --formula achembarpu/apps/<name>`.
+and validate with `brew style Formula/<name>.rb && brew audit --formula achembarpu/tap/<name>`.
 See `Formula/junie-local.rb` for a vendored-script pattern.
 
 ## Bumping a cask or formula

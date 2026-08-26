@@ -20,7 +20,7 @@ jobs:
       - name: brew audit (changed casks and formulae)
         run: |
           set -euo pipefail
-          brew tap achembarpu/apps "$PWD"
+          brew tap achembarpu/tap "$PWD"
           if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
             base="${{ github.event.pull_request.base.sha }}"
           else
@@ -36,12 +36,12 @@ jobs:
           fail=0
           for f in $changed_casks; do
             name="$(basename "$f" .rb)"
-            echo "==> brew audit --cask achembarpu/apps/$name"
-            brew audit --cask "achembarpu/apps/$name" || fail=1
+            echo "==> brew audit --cask achembarpu/tap/$name"
+            brew audit --cask "achembarpu/tap/$name" || fail=1
           done
           for f in $changed_formulae; do
             name="$(basename "$f" .rb)"
-            echo "==> brew audit --formula achembarpu/apps/$name"
-            brew audit --formula "achembarpu/apps/$name" || fail=1
+            echo "==> brew audit --formula achembarpu/tap/$name"
+            brew audit --formula "achembarpu/tap/$name" || fail=1
           done
           exit $fail

@@ -1,4 +1,4 @@
-# homebrew-apps — agent guide
+# homebrew-tap — agent guide
 
 Personal Homebrew tap for apps and CLI tools without an official Homebrew package. **The cask/formula file is
 the contract**: each cask and formula pins an exact `version` + `sha256` and wraps a
@@ -53,8 +53,8 @@ Verify BEFORE committing:
 
 ```bash
 brew style Casks/<name>.rb Formula/<name>.rb
-brew audit --cask achembarpu/apps/<name>   # tap must be tapped: brew tap achembarpu/apps
-brew audit --formula achembarpu/apps/<name>
+brew audit --cask achembarpu/tap/<name>   # tap must be tapped: brew tap achembarpu/tap
+brew audit --formula achembarpu/tap/<name>
 ```
 
 Test the real install path AFTER committing and pushing. Never substitute a
@@ -65,12 +65,12 @@ proves nothing about the cask. Downloading an artifact to compute its
 1. Push, then refresh the local tap clone. `brew update` updates every tap
    including this one, so no manual `git pull` is needed. Immediately after
    a push, prefer the targeted
-   `git -C "$(brew --repository achembarpu/apps)" pull --ff-only`: brew's
+   `git -C "$(brew --repository achembarpu/tap)" pull --ff-only`: brew's
    automatic pre-install update is skipped inside its freshness window
    (`HOMEBREW_AUTO_UPDATE_SECS`, default 24h) and may leave the new cask
    invisible ("Cask ... is unavailable").
-2. `brew audit --cask achembarpu/apps/<name>`
-3. `brew install --cask achembarpu/apps/<name>` — exercises the pinned
+2. `brew audit --cask achembarpu/tap/<name>`
+3. `brew install --cask achembarpu/tap/<name>` — exercises the pinned
    sha256 check, staging, `app` move, and `binary` link end to end.
 4. Verify the INSTALLED app, not the downloaded zip: run deep-strict
    `codesign --verify --deep --strict` on the moved `.app` (spot-check a

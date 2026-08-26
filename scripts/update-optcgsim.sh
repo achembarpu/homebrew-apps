@@ -30,7 +30,7 @@ ZIP_HINT="~711 MiB"
 # installation prefix. TAP_CASK may be supplied explicitly for unusual setups.
 TAP_CASK="${TAP_CASK:-}"
 if [ -z "$TAP_CASK" ] && command -v brew >/dev/null 2>&1; then
-  tap_root="$(brew --repository achembarpu/apps 2>/dev/null || true)"
+  tap_root="$(brew --repository achembarpu/tap 2>/dev/null || true)"
   [ -n "$tap_root" ] && TAP_CASK="$tap_root/Casks/optcgsim.rb"
 fi
 
@@ -216,15 +216,15 @@ if [ -n "$TAP_CASK" ] && [ -f "$TAP_CASK" ]; then
   printf 'Syncing cask to tap copy %s...\n' "$TAP_CASK" >&2
   cp "$CASK_FILE" "$TAP_CASK"
 else
-  AUDIT_NOTE=" (audit needs the tap: brew tap achembarpu/apps)"
+  AUDIT_NOTE=" (audit needs the tap: brew tap achembarpu/tap)"
 fi
 
 printf 'Running brew style %s ...\n' "$CASK_FILE" >&2
 if ! brew style "$CASK_FILE"; then STYLE_OK=0; fi
 
 if [ -n "$TAP_CASK" ] && [ -f "$TAP_CASK" ]; then
-  printf 'Running brew audit --cask achembarpu/apps/optcgsim ...\n' >&2
-  if ! brew audit --cask achembarpu/apps/optcgsim; then AUDIT_OK=0; fi
+  printf 'Running brew audit --cask achembarpu/tap/optcgsim ...\n' >&2
+  if ! brew audit --cask achembarpu/tap/optcgsim; then AUDIT_OK=0; fi
 fi
 
 # --- summary ---------------------------------------------------------------------------------
