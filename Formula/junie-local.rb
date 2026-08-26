@@ -11,6 +11,10 @@ class JunieLocal < Formula
   version "2026.08.17"
   sha256 "9f4b5de1fea745c78c263ba1a5703c184ffac61e155eb05fa21c1e78787ac306"
 
+  livecheck do
+    skip "The script is intentionally pinned to an upstream commit"
+  end
+
   def install
     bin.install "install.sh" => "junie-local-setup"
   end
@@ -24,6 +28,7 @@ class JunieLocal < Formula
       (60 GB recommended), macOS 26+. On first run it downloads several GB
       of engine and Qwen weights into ~/.local/share/junie-local and writes
       model config under ~/.junie — both outside brew management by design.
+      Remove those directories manually if you later uninstall this formula.
     EOS
   end
 

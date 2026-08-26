@@ -10,6 +10,11 @@ class Maki < Formula
   end
   license "MIT"
 
+  livecheck do
+    url "https://github.com/tontinton/maki/releases/latest"
+    strategy :github_latest
+  end
+
   def install
     bin.install "maki"
   end

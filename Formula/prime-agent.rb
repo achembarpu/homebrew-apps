@@ -5,6 +5,11 @@ class PrimeAgent < Formula
   sha256 "46c24db1782dd31adc35d5c6cbcc75564faba6ced3bf2ccf03d836ee77134475"
   license "MIT"
 
+  livecheck do
+    url "https://github.com/PrimeIntellect-ai/prime-agent/releases/latest"
+    strategy :github_latest
+  end
+
   depends_on "node@22"
 
   def install

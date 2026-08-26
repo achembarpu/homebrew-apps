@@ -10,6 +10,11 @@ class QwenCode < Formula
   end
   license "Apache-2.0"
 
+  livecheck do
+    url "https://github.com/QwenLM/qwen-code/releases/latest"
+    strategy :github_latest
+  end
+
   def install
     libexec.install Dir["*"]
     bin.write_exec_script libexec / "bin/qwen"
@@ -20,8 +25,12 @@ class QwenCode < Formula
       Qwen Code stores authentication and settings under ~/.qwen. It may also
       create project-local .qwen directories.
 
-      Formula uninstallation does not remove that user data.
+      Formula uninstallation does not remove that user data. Remove the
+      global settings manually if desired:
 
+        rm -rf ~/.qwen
+
+      Project-local .qwen directories are not managed by Homebrew.
       Updates are managed by `brew upgrade qwen-code`.
     EOS
   end
