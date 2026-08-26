@@ -21,11 +21,18 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CASKS_DIR="$ROOT_DIR/Casks"
 CASK_FILE="$CASKS_DIR/optcgsim.rb"
-TAP_CASK="/opt/homebrew/Library/Taps/achembarpu/homebrew-apps/Casks/optcgsim.rb"
 
 FEED_URL="https://optcgsim.com/feed/"
 PAGE_URL="https://optcgsim.com/"
 ZIP_HINT="~711 MiB"
+
+# Use the tapped checkout when available, but do not assume Homebrew's
+# installation prefix. TAP_CASK may be supplied explicitly for unusual setups.
+TAP_CASK="${TAP_CASK:-}"
+if [ -z "$TAP_CASK" ] && command -v brew >/dev/null 2>&1; then
+  tap_root="$(brew --repository achembarpu/apps 2>/dev/null || true)"
+  [ -n "$tap_root" ] && TAP_CASK="$tap_root/Casks/optcgsim.rb"
+fi
 
 die() { printf 'Error: %s\n' "$*" >&2; exit 1; }
 
@@ -205,7 +212,7 @@ rm -f "${CASK_FILE}.bak"
 STYLE_OK=1
 AUDIT_OK=1
 AUDIT_NOTE=""
-if [ -f "$TAP_CASK" ]; then
+if [ -n "$TAP_CASK" ] && [ -f "$TAP_CASK" ]; then
   printf 'Syncing cask to tap copy %s...\n' "$TAP_CASK" >&2
   cp "$CASK_FILE" "$TAP_CASK"
 else
@@ -215,7 +222,7 @@ fi
 printf 'Running brew style %s ...\n' "$CASK_FILE" >&2
 if ! brew style "$CASK_FILE"; then STYLE_OK=0; fi
 
-if [ -f "$TAP_CASK" ]; then
+if [ -n "$TAP_CASK" ] && [ -f "$TAP_CASK" ]; then
   printf 'Running brew audit --cask achembarpu/apps/optcgsim ...\n' >&2
   if ! brew audit --cask achembarpu/apps/optcgsim; then AUDIT_OK=0; fi
 fi
