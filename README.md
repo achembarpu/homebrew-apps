@@ -23,12 +23,15 @@ brew upgrade --cask achembarpu/apps/<cask>    # or: brew upgrade --cask <cask>
 brew upgrade achembarpu/apps/<formula>        # or: brew upgrade <formula>
 ```
 
-## Uninstall (including app data)
+## Uninstall
 
 ```bash
-brew uninstall --cask --zap achembarpu/apps/<cask>  # casks
+brew uninstall --cask --zap achembarpu/apps/<cask>  # casks, including app data
 brew uninstall achembarpu/apps/<formula>             # formulae
 ```
+
+Formulae do not support cask-style `zap` cleanup. Remove formula-specific
+user data manually using the command in the formula's caveats.
 
 ## Available casks
 
@@ -45,6 +48,7 @@ brew uninstall achembarpu/apps/<formula>             # formulae
 | Formula | What | Notes |
 | --- | --- | --- |
 | `junie-local` | `junie-local-setup` command for the optional local model of the `junie` cask (JetBrains MLX engine + Qwen weights) | Vendored verbatim at a pinned upstream revision — no curl pipes. Upstream hard-gates: Apple M5+, >=40 GB RAM, macOS 26+. Downloads land in ~/.local/share/junie-local, outside brew. |
+| `prime-agent` | Self-improving coding and research agent | Node.js formula using the pinned GitHub release package. Requires Node.js 22; npm dependencies are installed into the formula keg. User data under ~/.prime/agent is not removed on uninstall. |
 
 ## Adding a cask or formula
 
