@@ -10,9 +10,12 @@ cask "junie" do
   desc "AI coding agent CLI by JetBrains"
   homepage "https://www.jetbrains.com/junie/"
 
+  # The GitHub latest release is a nightly build, not the stable release
+  # channel used by this cask. Check JetBrains' stable update manifest instead.
   livecheck do
-    url :url
-    strategy :github_latest
+    url "https://raw.githubusercontent.com/jetbrains-junie/junie/main/update-info.jsonl"
+    regex(/"version":"(\d+(?:\.\d+)+)".*"platform":"macos-aarch64"/)
+    strategy :page_match
   end
 
   depends_on :macos
