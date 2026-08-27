@@ -40,6 +40,7 @@ user data manually using the command in the formula's caveats.
 | `junie` | JetBrains Junie AI coding agent CLI (Apple Silicon & Intel) | Developer ID signed and notarized; no `postflight` needed. Installs `junie.app` and links the CLI onto PATH. Updates via `brew upgrade`, not the binary's built-in self-updater. |
 | `mdv` | Native Markdown viewer with history, bookmarks, and a TOC sidebar (Apple Silicon, macOS 13+) | Developer-signed, but the release zip's AppleDouble junk files break the signature seal; the cask clears quarantine and re-signs in `postflight`. History lives in a SQLite DB that `zap` removes. |
 | `localvoxtral` | Realtime, fully local dictation menu-bar app (Apple Silicon, macOS 15+) | Releases are ad-hoc signed, not notarized; the cask clears quarantine and re-signs in `postflight`. |
+| `mac-dictate-anywhere` | On-device voice dictation for any macOS app (universal, macOS 14+) | Developer ID signed and notarized; requires Microphone and Accessibility permissions. Shared FluidAudio speech models are not removed by `zap`. |
 | `nativ` | Local AI workspace for running MLX models natively on Apple silicon (macOS 26+, arm64) | Developer ID signed and notarized; no `postflight` needed. Models download into the shared Hugging Face cache, which `zap` leaves alone. |
 | `optcgsim` | Unofficial practice tool for the One Piece Card Game (universal Mac build) | Ad-hoc signed, not notarized; the cask clears quarantine and re-signs in `postflight`. Pins the site's base build (1.42c); newer versions arrive via the in-app auto-patcher. |
 
