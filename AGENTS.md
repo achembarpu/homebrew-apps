@@ -33,54 +33,13 @@ binaries.
 
 ## Workflow
 
-Generate a cask:
+Use `.agents/commands/add-package.md` for package intake. It dispatches to
+`.agents/agents/homebrew-package-maintainer.md`, which loads
+`.agents/skills/homebrew-package-maintenance/SKILL.md` for the detailed
+workflow. Do not commit or push without explicit authorization.
 
-```bash
-./scripts/add-cask.sh <owner>/<repo>            # auto-picks the app zip/dmg
-./scripts/add-cask.sh <owner>/<repo> --re-sign  # + postflight re-sign block
-./scripts/add-cask.sh <owner>/<repo> --no-write # preview without writing
-```
-
-Bump an existing cask (keeps `desc`/`zap`/`caveats`):
-
-```bash
-./scripts/add-cask.sh <owner>/<repo> --existing <name>
-```
-
-Export `GH_TOKEN` (e.g. `$(gh auth token)`) so the script authenticates its
-GitHub API calls; without it you hit anonymous 403 rate limits.
-
-Verify BEFORE committing:
-
-```bash
-brew style Casks/<name>.rb Formula/<name>.rb
-brew audit --cask achembarpu/tap/<name>   # tap must be tapped: brew tap achembarpu/tap
-brew audit --formula achembarpu/tap/<name>
-```
-
-Test the real install path AFTER committing and pushing. Never substitute a
-hand-unzipped copy in /tmp for this: it tests bytes brew does not ship and
-proves nothing about the cask. Downloading an artifact to compute its
-`sha256` (see hard rules) is fine — that is forensics, not the test.
-
-1. Push, then refresh the local tap clone. `brew update` updates every tap
-   including this one, so no manual `git pull` is needed. Immediately after
-   a push, prefer the targeted
-   `git -C "$(brew --repository achembarpu/tap)" pull --ff-only`: brew's
-   automatic pre-install update is skipped inside its freshness window
-   (`HOMEBREW_AUTO_UPDATE_SECS`, default 24h) and may leave the new cask
-   invisible ("Cask ... is unavailable").
-2. `brew audit --cask achembarpu/tap/<name>`
-3. `brew install --cask achembarpu/tap/<name>` — exercises the pinned
-   sha256 check, staging, `app` move, and `binary` link end to end.
-4. Verify the INSTALLED app, not the downloaded zip: run deep-strict
-   `codesign --verify --deep --strict` on the moved `.app` (spot-check a
-   bundled binary's TeamIdentifier when signing matters), `which <binary>`,
-   and run `<binary> --version`.
-5. Clean up scratch files; leave no zip dumps or extracted trees behind in
-   `$TMPDIR`.
-
-Full option reference: `./scripts/add-cask.sh --help`.
+The existing `scripts/add-cask.sh` remains the generator for GitHub-release
+casks. Run `./scripts/add-cask.sh --help` for its options.
 
 ### Automation
 

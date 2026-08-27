@@ -55,37 +55,18 @@ user data manually using the command in the formula's caveats.
 
 ## Adding a cask or formula
 
-The fast path for casks — generate a cask from a GitHub release:
+Agents should use the repeatable `add-package` workflow in
+`.agents/skills/homebrew-package-maintenance/SKILL.md`. It covers artifact
+selection, signing, user-data cleanup, README synchronization, and verification.
+
+For GitHub-release casks, the generator remains available:
 
 ```bash
-./scripts/add-cask.sh <owner>/<repo>                  # latest release, auto-detected zip/dmg
-./scripts/add-cask.sh <owner>/<repo> --version v1.2.3 # specific tag
-./scripts/add-cask.sh <owner>/<repo> --re-sign        # app ships ad-hoc signed; clear + re-sign postflight
-./scripts/add-cask.sh <owner>/<repo> --macos sequoia --arch arm64
+./scripts/add-cask.sh <owner>/<repo> --no-write
 ```
 
-Set `GH_TOKEN` (for example `GH_TOKEN="$(gh auth token)"`) and the script
-authenticates its GitHub API calls; anonymous calls share a strict rate limit
-and fail with 403.
-
-Then, by hand if needed: fill in `desc`/`name`, add a `zap trash:` list for
-the app's data directories, and add `caveats`. Validate before committing:
-
-```bash
-brew style Casks/<name>.rb
-brew audit --cask achembarpu/tap/<name>   # requires the tap to be tapped (brew tap achembarpu/tap)
-```
-
-Full option reference: `./scripts/add-cask.sh --help`.
-
-Manual alternative for casks: copy an existing `Casks/*.rb`, set `version`, `sha256`
-(from the release's `.sha256` asset), `url`, and `app "<App.app>"`.
-
-For formulae (CLI tools without a `.app` bundle, for example npm `.tgz` tarballs or install scripts),
-create `Formula/<name>.rb` by hand: pin `url` to the GitHub release asset (not an external mirror),
-set `version` and `sha256` (from `SHA256SUMS` or `shasum -a 256`), add `depends_on` and a `livecheck` if applicable,
-and validate with `brew style Formula/<name>.rb && brew audit --formula achembarpu/tap/<name>`.
-See `Formula/junie-local.rb` for a vendored-script pattern.
+Run `./scripts/add-cask.sh --help` for all options. Formulae and exceptional
+artifacts require the manual workflow described by the skill.
 
 ## Bumping a cask or formula
 
