@@ -103,15 +103,37 @@ GitHub release, so `add-cask.sh` can't drive it. Run
 `./scripts/update-optcgsim.sh --dry-run` first, then the script without flags
 (see `.agents/skills/update-optcgsim/SKILL.md` for the full workflow).
 
-## CI
+### Updating `junie-local`
 
-`.github/workflows/ci.yml` runs on every push/PR to `main`:
+`junie-local` is pinned to a specific commit of
+`jetbrains-junie/junie:local/install.sh` (URL contains the 40-char SHA;
+`version` is the commit's `YYYY.MM.DD`). No `livecheck` — the authority is the
+latest commit touching that path. Run `./scripts/update-junie-local.sh
+--dry-run` first, then the script without flags. It authenticates via
+`GH_TOKEN`/`GITHUB_TOKEN`, fetches the latest SHA via the GitHub API, downloads
+the raw file, recomputes `sha256`, and rewrites `url`/`version`/`sha256`.
 
-- `brew style Casks/*.rb Formula/*.rb` — offline, structural (all casks and formulae)
-- `brew audit --cask / --formula` — only the casks and formulae changed in the push/PR
+## Automation
 
-`brew audit`'s `--new` admission rules (repo notability, notarization) do not
-apply to a personal tap; plain audit is the bar here.
+`.github/workflows/autobump.yml` runs daily at 06:17 UTC and on
+`workflow_dispatch`:
+
+- `autobump` — `brew bump --no-fork --open-pr --tap=achembarpu/tap` for every
+  cask and formula that defines a `livecheck` (`junie`, `mdv`, `localvoxtral`,
+  `nativ`, `prime-agent`, `qwen-code`, `maki`). Each outdated package gets its
+  own PR. The job de-duplicates against open PRs and runs `brew audit` and
+  `brew style` inline.
+
+- `bump-optcgsim` — runs `scripts/update-optcgsim.sh` (see above) and opens a
+  PR with `peter-evans/create-pull-request` when the RSS version differs.
+
+- `bump-junie-local` — runs `scripts/update-junie-local.sh` (see above) and
+  opens a PR when the pinned SHA differs.
+
+There is no separate `brew style`/`brew audit` CI job. Autobump validates its
+own changes; for manual bumps, verify locally with `brew style` and
+`brew audit` before committing (see Verification above). `brew audit --new`
+admission rules do not apply to a personal tap.
 
 ## Notes
 

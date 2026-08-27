@@ -26,9 +26,10 @@ binaries.
 - Add a `zap trash:` list for any app that stores data, and `caveats` for
   permission gotchas (e.g. a silently-dropped Accessibility grant after
   updates).
-- CI (`ci.yml`) runs `brew style` on all casks and formulae and `brew audit` on changed
-  casks and formulae. Do not add `--new` rules there — admission rules (repo notability,
-  notarization) don't apply to a personal tap.
+- `brew audit --new` admission rules (repo notability, notarization) do not apply
+  to a personal tap. Do not add `--new` checks. There is no lint CI job;
+  `autobump.yml` validates its own changes via `brew style` and `brew audit`,
+  and manual bumps are verified locally before committing.
 
 ## Workflow
 
@@ -80,6 +81,25 @@ proves nothing about the cask. Downloading an artifact to compute its
    `$TMPDIR`.
 
 Full option reference: `./scripts/add-cask.sh --help`.
+
+### Automation
+
+`.github/workflows/autobump.yml` runs daily at 06:17 UTC and on
+`workflow_dispatch`:
+
+- `autobump` — `brew bump --no-fork --open-pr` for every `livecheck`-enabled
+  cask/formula (`junie`, `mdv`, `localvoxtral`, `nativ`, `prime-agent`,
+  `qwen-code`, `maki`). One PR per outdated package, de-duplicated against
+  open PRs.
+- `bump-optcgsim` — runs `scripts/update-optcgsim.sh` for the Dropbox-hosted
+  cask that has no `livecheck`.
+- `bump-junie-local` — runs `scripts/update-junie-local.sh` for the
+  commit-pinned `junie-local` formula that has `livecheck skip`; version
+  authority is the latest commit touching `local/install.sh`.
+
+No separate lint CI exists. Autobump validates its own edits; for hand-made
+bumps run `brew style` + `brew audit` locally as in Verification before
+committing.
 
 ## Conventions
 
