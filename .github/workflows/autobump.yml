@@ -106,26 +106,36 @@ jobs:
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Set up git
+        if: steps.check.outputs.needed == 'true' && steps.update.outputs.changed == 'true'
+        uses: Homebrew/actions/git-user-config@8f3d1ec8a696b3b9d9a6c3696b6c73033cab69e4 # 2026.08.14.1
+
       - name: Create pull request
         if: steps.check.outputs.needed == 'true' && steps.update.outputs.changed == 'true'
-        uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d8797 # v7.0.8
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          branch: bump-optcgsim-${{ steps.update.outputs.version }}
-          delete-branch: true
-          commit-message: "optcgsim ${{ steps.update.outputs.version }}"
-          title: "optcgsim ${{ steps.update.outputs.version }}"
-          body: |
-            Automated bump of `optcgsim` to `${{ steps.update.outputs.version }}` via `scripts/update-optcgsim.sh`.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH="bump-optcgsim-${{ steps.update.outputs.version }}"
+          if git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null 2>&1; then
+            echo "Branch $BRANCH already exists on remote, skipping"
+            exit 0
+          fi
+          git checkout -b "$BRANCH"
+          git add Casks/optcgsim.rb
+          git commit -m "optcgsim ${{ steps.update.outputs.version }}"
+          git push origin "$BRANCH"
+          BODY="Automated bump of \`optcgsim\` to \`${{ steps.update.outputs.version }}\` via \`scripts/update-optcgsim.sh\`.
 
-            - Version from RSS feed: https://optcgsim.com/feed/
-            - URL scraped from https://optcgsim.com/
-            - Binary verified against embedded `sim version:` in `Assembly-CSharp.dll`
+          - Version from RSS feed: https://optcgsim.com/feed/
+          - URL scraped from https://optcgsim.com/
+          - Binary verified against embedded \`sim version:\` in \`Assembly-CSharp.dll\`
 
-            Triggered by `autobump.yml` (`bump-optcgsim` job).
-          labels: autobump
-          add-paths: |
-            Casks/optcgsim.rb
+          Triggered by \`autobump.yml\` (\`bump-optcgsim\` job)."
+          if ! gh pr create --title "optcgsim ${{ steps.update.outputs.version }}" --body "$BODY" --label autobump 2>/tmp/gh-pr.log; then
+            cat /tmp/gh-pr.log
+            echo "Retrying without label (autobump label may not exist yet)..."
+            gh pr create --title "optcgsim ${{ steps.update.outputs.version }}" --body "$BODY"
+          fi
 
   bump-junie-local:
     name: Bump junie-local (pinned script)
@@ -193,23 +203,33 @@ jobs:
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Set up git
+        if: steps.check.outputs.needed == 'true' && steps.update.outputs.changed == 'true'
+        uses: Homebrew/actions/git-user-config@8f3d1ec8a696b3b9d9a6c3696b6c73033cab69e4 # 2026.08.14.1
+
       - name: Create pull request
         if: steps.check.outputs.needed == 'true' && steps.update.outputs.changed == 'true'
-        uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d8797 # v7.0.8
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          branch: bump-junie-local-${{ steps.update.outputs.version }}
-          delete-branch: true
-          commit-message: "junie-local ${{ steps.update.outputs.version }}"
-          title: "junie-local ${{ steps.update.outputs.version }}"
-          body: |
-            Automated bump of `junie-local` to `${{ steps.update.outputs.version }}` (`${{ steps.update.outputs.sha }}`) via `scripts/update-junie-local.sh`.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH="bump-junie-local-${{ steps.update.outputs.version }}"
+          if git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null 2>&1; then
+            echo "Branch $BRANCH already exists on remote, skipping"
+            exit 0
+          fi
+          git checkout -b "$BRANCH"
+          git add Formula/junie-local.rb
+          git commit -m "junie-local ${{ steps.update.outputs.version }}"
+          git push origin "$BRANCH"
+          BODY="Automated bump of \`junie-local\` to \`${{ steps.update.outputs.version }}\` (\`${{ steps.update.outputs.sha }}\`) via \`scripts/update-junie-local.sh\`.
 
-            - Pin: `local/install.sh` at `${{ steps.update.outputs.sha }}` from https://github.com/jetbrains-junie/junie
-            - Version derived from commit committer date (`YYYY.MM.DD`)
-            - `sha256` recomputed from `https://raw.githubusercontent.com/jetbrains-junie/junie/${{ steps.update.outputs.sha }}/local/install.sh`
+          - Pin: \`local/install.sh\` at \`${{ steps.update.outputs.sha }}\` from https://github.com/jetbrains-junie/junie
+          - Version derived from commit committer date (\`YYYY.MM.DD\`)
+          - \`sha256\` recomputed from \`https://raw.githubusercontent.com/jetbrains-junie/junie/${{ steps.update.outputs.sha }}/local/install.sh\`
 
-            Triggered by `autobump.yml` (`bump-junie-local` job).
-          labels: autobump
-          add-paths: |
-            Formula/junie-local.rb
+          Triggered by \`autobump.yml\` (\`bump-junie-local\` job)."
+          if ! gh pr create --title "junie-local ${{ steps.update.outputs.version }}" --body "$BODY" --label autobump 2>/tmp/gh-pr.log; then
+            cat /tmp/gh-pr.log
+            echo "Retrying without label (autobump label may not exist yet)..."
+            gh pr create --title "junie-local ${{ steps.update.outputs.version }}" --body "$BODY"
+          fi
