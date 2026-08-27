@@ -1,0 +1,215 @@
+name: brew bump
+
+on:
+  schedule:
+    # Daily at 06:17 UTC — randomised to avoid peak hours.
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+defaults:
+  run:
+    shell: bash -xeuo pipefail {0}
+
+jobs:
+  autobump:
+    name: Bump outdated formulae and casks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Set up Homebrew
+        id: set-up-homebrew
+        uses: Homebrew/actions/setup-homebrew@8f3d1ec8a696b3b9d9a6c3696b6c73033cab69e4 # 2026.08.14.1
+
+      - name: Set up git
+        id: git_setup
+        uses: Homebrew/actions/git-user-config@8f3d1ec8a696b3b9d9a6c3696b6c73033cab69e4 # 2026.08.14.1
+
+      # brew bump checks every cask/formula in the tap that defines a
+      # livecheck block (junie, mdv, localvoxtral, nativ, prime-agent,
+      # qwen-code, maki). It downloads the new artifact, recomputes sha256,
+      # rewrites version/sha256/url in place, runs `brew audit`/`brew style`,
+      # de-duplicates against open PRs, and opens one PR per outdated
+      # package with --no-fork (branch pushed directly to this repo).
+      #
+      # Excluded automatically (handled by dedicated jobs):
+      #   - junie-local: livecheck skip (vendored commit-pin, see bump-junie-local)
+      #   - optcgsim:    no livecheck (Dropbox-hosted, see bump-optcgsim)
+      - name: Bump outdated packages
+        env:
+          HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HOMEBREW_GIT_COMMITTER_NAME: ${{ steps.git_setup.outputs.name }}
+          HOMEBREW_GIT_COMMITTER_EMAIL: ${{ steps.git_setup.outputs.email }}
+          TAP_NAME: ${{ steps.set-up-homebrew.outputs.tap-name }}
+        run: brew bump --no-fork --open-pr --tap="$TAP_NAME"
+
+  bump-optcgsim:
+    name: Bump optcgsim (non-GitHub)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout tap
+        uses: actions/checkout@v4
+
+      - name: Set up Homebrew (for brew style/audit)
+        uses: Homebrew/actions/setup-homebrew@8f3d1ec8a696b3b9d9a6c3696b6c73033cab69e4 # 2026.08.14.1
+
+      - name: Tap this repository
+        run: brew tap achembarpu/tap "$PWD"
+
+      - name: Check for optcgsim update
+        id: check
+        run: |
+          set +x
+          echo "Checking optcgsim RSS feed vs pinned version..."
+          if ./scripts/update-optcgsim.sh --dry-run 2>&1 | tee /tmp/optcgsim-plan.txt; then
+            if grep -q "already up to date" /tmp/optcgsim-plan.txt; then
+              echo "needed=false" >> "$GITHUB_OUTPUT"
+              echo "No update needed for optcgsim" >> "$GITHUB_STEP_SUMMARY"
+              cat /tmp/optcgsim-plan.txt >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "needed=true" >> "$GITHUB_OUTPUT"
+              echo "Update available for optcgsim" >> "$GITHUB_STEP_SUMMARY"
+              cat /tmp/optcgsim-plan.txt >> "$GITHUB_STEP_SUMMARY"
+            fi
+          else
+            echo "needed=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::update-optcgsim.sh --dry-run failed; see log"
+            cat /tmp/optcgsim-plan.txt
+          fi
+          cat /tmp/optcgsim-plan.txt
+
+      - name: Update optcgsim cask
+        if: steps.check.outputs.needed == 'true'
+        id: update
+        run: |
+          ./scripts/update-optcgsim.sh 2>&1 | tee /tmp/optcgsim-update.txt
+          cat /tmp/optcgsim-update.txt >> "$GITHUB_STEP_SUMMARY"
+          new_version="$(sed -n 's/^  version "\([^"]*\)"/\1/p' Casks/optcgsim.rb)"
+          if [ -z "$new_version" ]; then
+            echo "::error::Could not read new version from Casks/optcgsim.rb"
+            exit 1
+          fi
+          echo "version=$new_version" >> "$GITHUB_OUTPUT"
+          echo "Updated optcgsim to $new_version"
+          if git diff --quiet -- Casks/optcgsim.rb; then
+            echo "::warning::Casks/optcgsim.rb unchanged after script; skipping PR"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create pull request
+        if: steps.check.outputs.needed == 'true' && steps.update.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d8797 # v7.0.8
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: bump-optcgsim-${{ steps.update.outputs.version }}
+          delete-branch: true
+          commit-message: "optcgsim ${{ steps.update.outputs.version }}"
+          title: "optcgsim ${{ steps.update.outputs.version }}"
+          body: |
+            Automated bump of `optcgsim` to `${{ steps.update.outputs.version }}` via `scripts/update-optcgsim.sh`.
+
+            - Version from RSS feed: https://optcgsim.com/feed/
+            - URL scraped from https://optcgsim.com/
+            - Binary verified against embedded `sim version:` in `Assembly-CSharp.dll`
+
+            Triggered by `autobump.yml` (`bump-optcgsim` job).
+          labels: autobump
+          add-paths: |
+            Casks/optcgsim.rb
+
+  bump-junie-local:
+    name: Bump junie-local (pinned script)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout tap
+        uses: actions/checkout@v4
+
+      - name: Set up Homebrew (for brew style/audit)
+        uses: Homebrew/actions/setup-homebrew@8f3d1ec8a696b3b9d9a6c3696b6c73033cab69e4 # 2026.08.14.1
+
+      - name: Tap this repository
+        run: brew tap achembarpu/tap "$PWD"
+
+      - name: Check for junie-local update
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set +x
+          echo "Checking latest commit touching local/install.sh..."
+          if ./scripts/update-junie-local.sh --dry-run 2>&1 | tee /tmp/junie-local-plan.txt; then
+            if grep -q "already up to date" /tmp/junie-local-plan.txt; then
+              echo "needed=false" >> "$GITHUB_OUTPUT"
+              echo "No update needed for junie-local" >> "$GITHUB_STEP_SUMMARY"
+              cat /tmp/junie-local-plan.txt >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "needed=true" >> "$GITHUB_OUTPUT"
+              echo "Update available for junie-local" >> "$GITHUB_STEP_SUMMARY"
+              cat /tmp/junie-local-plan.txt >> "$GITHUB_STEP_SUMMARY"
+            fi
+          else
+            echo "needed=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::update-junie-local.sh --dry-run failed; see log"
+            cat /tmp/junie-local-plan.txt
+          fi
+          cat /tmp/junie-local-plan.txt
+
+      - name: Update junie-local formula
+        if: steps.check.outputs.needed == 'true'
+        id: update
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ./scripts/update-junie-local.sh 2>&1 | tee /tmp/junie-local-update.txt
+          cat /tmp/junie-local-update.txt >> "$GITHUB_STEP_SUMMARY"
+          new_version="$(sed -n 's/^  version "\([^"]*\)"/\1/p' Formula/junie-local.rb)"
+          new_sha="$(sed -n 's|.*raw.githubusercontent.com/jetbrains-junie/junie/\([0-9a-f]\{40\}\)/.*|\1|p' Formula/junie-local.rb)"
+          if [ -z "$new_version" ] || [ -z "$new_sha" ]; then
+            echo "::error::Could not read new version/sha from Formula/junie-local.rb"
+            exit 1
+          fi
+          echo "version=$new_version" >> "$GITHUB_OUTPUT"
+          echo "sha=$new_sha" >> "$GITHUB_OUTPUT"
+          echo "Updated junie-local to $new_version ($new_sha)"
+          if git diff --quiet -- Formula/junie-local.rb; then
+            echo "::warning::Formula/junie-local.rb unchanged after script; skipping PR"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create pull request
+        if: steps.check.outputs.needed == 'true' && steps.update.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d8797 # v7.0.8
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: bump-junie-local-${{ steps.update.outputs.version }}
+          delete-branch: true
+          commit-message: "junie-local ${{ steps.update.outputs.version }}"
+          title: "junie-local ${{ steps.update.outputs.version }}"
+          body: |
+            Automated bump of `junie-local` to `${{ steps.update.outputs.version }}` (`${{ steps.update.outputs.sha }}`) via `scripts/update-junie-local.sh`.
+
+            - Pin: `local/install.sh` at `${{ steps.update.outputs.sha }}` from https://github.com/jetbrains-junie/junie
+            - Version derived from commit committer date (`YYYY.MM.DD`)
+            - `sha256` recomputed from `https://raw.githubusercontent.com/jetbrains-junie/junie/${{ steps.update.outputs.sha }}/local/install.sh`
+
+            Triggered by `autobump.yml` (`bump-junie-local` job).
+          labels: autobump
+          add-paths: |
+            Formula/junie-local.rb
