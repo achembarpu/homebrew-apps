@@ -45,6 +45,7 @@ user data manually using the command in the formula's caveats.
 | `mac-dictate-anywhere` | On-device voice dictation for any macOS app (universal, macOS 14+) | Developer ID signed and notarized; requires Microphone and Accessibility permissions. Shared FluidAudio speech models are not removed by `zap`. |
 | `nativ` | Local AI workspace for running MLX models natively on Apple silicon (macOS 26+, arm64) | Developer ID signed and notarized; no `postflight` needed. Models download into the shared Hugging Face cache, which `zap` leaves alone. |
 | `optcgsim` | Unofficial practice tool for the One Piece Card Game (universal Mac build) | Ad-hoc signed, not notarized; the cask clears quarantine and re-signs in `postflight`. Pins the site's base build (1.42c); newer versions arrive via the in-app auto-patcher. |
+| `podium` | Multi-agent orchestrator for coding agents (Apple Silicon & Intel, macOS 11+) | Developer ID signed and notarized; requires agent CLIs to be installed and authenticated separately. Podium application data is removed by `zap`. |
 | `writer-computer` | Native Markdown writing environment (Apple Silicon, macOS 10.15+) | Developer ID signed and notarized; uses the pinned GitHub DMG. App data is removed by `zap`. |
 
 ## Formulas
