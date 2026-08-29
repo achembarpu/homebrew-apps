@@ -52,8 +52,8 @@ user data manually using the command in the formula's caveats.
 | --- | --- | --- |
 | `junie-local` | `junie-local-setup` command for the optional local model of the `junie` cask (JetBrains MLX engine + Qwen weights) | Vendored verbatim at a pinned upstream revision — no curl pipes. Upstream hard-gates: Apple M5+, >=40 GB RAM, macOS 26+. Downloads land in ~/.local/share/junie-local, outside brew. |
 | `prime-agent` | Self-improving coding and research agent | Node.js formula using the pinned GitHub release package. Requires Node.js 22; npm dependencies are installed into the formula keg. User data under ~/.prime/agent is not removed on uninstall. |
-| `qwen-code` | Open-source AI coding agent for the terminal (Apple Silicon & Intel) | Uses Qwen Code's pinned standalone macOS release and bundled Node.js runtime. User configuration is not removed on uninstall. |
-| `maki` | Efficient AI coding agent with Lua plugins (Apple Silicon & Intel) | Uses Maki's pinned native macOS release. User configuration and sessions are not removed on uninstall. |
+| `qwen-code` | Open-source AI coding agent for the terminal (Apple Silicon & Intel, macOS) | Uses Qwen Code's pinned standalone macOS release and bundled Node.js runtime. User configuration is not removed on uninstall. |
+| `maki` | Efficient AI coding agent with Lua plugins (Apple Silicon & Intel, macOS) | Uses Maki's pinned native macOS release. User configuration and sessions are not removed on uninstall. |
 
 ## Adding a cask or formula
 

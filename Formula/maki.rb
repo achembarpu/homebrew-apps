@@ -3,9 +3,11 @@ class Maki < Formula
   homepage "https://maki.sh"
   if Hardware::CPU.arm?
     url "https://github.com/tontinton/maki/releases/download/v0.4.12/maki-v0.4.12-aarch64-apple-darwin.tar.gz"
+    version "0.4.12"
     sha256 "4bb477085f6ebda698dfe1bb97d99ed91c34c3eb0cdefe36859d3a530f41456b"
   else
     url "https://github.com/tontinton/maki/releases/download/v0.4.12/maki-v0.4.12-x86_64-apple-darwin.tar.gz"
+    version "0.4.12"
     sha256 "99515f13a0bab6ec90e83d3ad7ad57d5387c4987eadc862642055c227e7dc71d"
   end
   license "MIT"
@@ -14,6 +16,8 @@ class Maki < Formula
     url "https://github.com/tontinton/maki/releases/latest"
     strategy :github_latest
   end
+
+  depends_on :macos
 
   def install
     bin.install "maki"

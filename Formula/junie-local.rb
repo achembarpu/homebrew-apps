@@ -15,6 +15,9 @@ class JunieLocal < Formula
     skip "The script is intentionally pinned to an upstream commit"
   end
 
+  depends_on arch: :arm64
+  depends_on macos: :tahoe
+
   def install
     bin.install "install.sh" => "junie-local-setup"
   end

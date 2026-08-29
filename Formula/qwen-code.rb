@@ -3,9 +3,11 @@ class QwenCode < Formula
   homepage "https://qwenlm.github.io/qwen-code-docs/en/users/overview"
   if Hardware::CPU.arm?
     url "https://github.com/QwenLM/qwen-code/releases/download/v0.22.2/qwen-code-darwin-arm64.tar.gz"
+    version "0.22.2"
     sha256 "d056fd3be53cb6ed24b52c3bf9158c5cbd2ee7e54671e9fd141b1cad9a8390e0"
   else
     url "https://github.com/QwenLM/qwen-code/releases/download/v0.22.2/qwen-code-darwin-x64.tar.gz"
+    version "0.22.2"
     sha256 "07a2156d85b522dde7a3dc690bee9afaa1a4097b7ebe1cd410c339c76c322b25"
   end
   license "Apache-2.0"
@@ -14,6 +16,8 @@ class QwenCode < Formula
     url "https://github.com/QwenLM/qwen-code/releases/latest"
     strategy :github_latest
   end
+
+  depends_on :macos
 
   def install
     libexec.install Dir["*"]
