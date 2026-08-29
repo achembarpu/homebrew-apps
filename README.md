@@ -37,6 +37,7 @@ user data manually using the command in the formula's caveats.
 
 | Cask | What | Notes |
 | --- | --- | --- |
+| `clearly` | Native Markdown editor with live preview (universal, macOS 15+) | Developer ID signed and notarized; uses the Sparkle appcast for `livecheck` and supports automatic updates. Scratchpads and preferences are removed by `zap`. |
 | `junie` | JetBrains Junie AI coding agent CLI (Apple Silicon & Intel) | Developer ID signed and notarized; no `postflight` needed. Installs `junie.app` and links the CLI onto PATH. Updates via `brew upgrade`, not the binary's built-in self-updater. |
 | `mowglii-mdv` | Native Markdown viewer with Quick Look and a command-line tool (universal, macOS 13+) | Developer ID signed and notarized; uses Mowglii's pinned S3 release artifact and Sparkle appcast for `livecheck`. The optional command-line tool is installed from the app menu. |
 | `tqbf-mdv` | Native Markdown viewer with history, bookmarks, and a TOC sidebar (Apple Silicon, macOS 13+) | Developer-signed, but the release zip's AppleDouble junk files break the signature seal; the cask clears quarantine and re-signs in `postflight`. History lives in a SQLite DB that `zap` removes. |
@@ -102,8 +103,9 @@ the raw file, recomputes `sha256`, and rewrites `url`/`version`/`sha256`.
 `workflow_dispatch`:
 
 - `autobump` — `brew bump --no-fork --open-pr --tap=achembarpu/tap` for every
-  cask and formula that defines a `livecheck` (`junie`, `mdv`, `localvoxtral`,
-  `nativ`, `prime-agent`, `qwen-code`, `maki`). Each outdated package gets its
+  cask and formula that defines a `livecheck` (`clearly`, `junie`,
+  `mowglii-mdv`, `tqbf-mdv`, `localvoxtral`, `nativ`, `prime-agent`,
+  `qwen-code`, `maki`). Each outdated package gets its
   own PR. The job de-duplicates against open PRs and runs `brew audit` and
   `brew style` inline.
 
