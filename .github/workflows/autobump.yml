@@ -24,7 +24,7 @@ concurrency:
 jobs:
   autobump:
     name: Bump outdated formulae and casks
-    runs-on: ubuntu-latest
+    runs-on: macos-14
     timeout-minutes: 30
     permissions:
       contents: write
@@ -40,7 +40,7 @@ jobs:
 
       # brew bump checks every cask/formula in the tap that defines a
       # livecheck block (clearly, junie, localvoxtral, mac-dictate-anywhere,
-      # mowglii-mdv, nativ, prime-agent, qwen-code, maki, tqbf-mdv). It
+      # mowglii-mdv, nativ, prime-agent, tqbf-mdv). It
       # downloads the new artifact, recomputes sha256,
       # rewrites version/sha256/url in place, runs `brew audit`/`brew style`,
       # de-duplicates against open PRs, and opens one PR per outdated
@@ -49,13 +49,17 @@ jobs:
       # Excluded automatically (handled by dedicated jobs):
       #   - junie-local: livecheck skip (vendored commit-pin, see bump-junie-local)
       #   - optcgsim:    no livecheck (Dropbox-hosted, see bump-optcgsim)
+      #   - qwen-code/maki: no_autobump! (architecture-specific URLs)
       - name: Bump outdated packages
         env:
           HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HOMEBREW_GIT_COMMITTER_NAME: ${{ steps.git_setup.outputs.name }}
           HOMEBREW_GIT_COMMITTER_EMAIL: ${{ steps.git_setup.outputs.email }}
           TAP_NAME: ${{ steps.setup-homebrew.outputs.tap-name }}
-        run: brew bump --no-fork --open-pr --tap="$TAP_NAME"
+        run: |
+          for package in clearly junie localvoxtral mac-dictate-anywhere mowglii-mdv nativ prime-agent tqbf-mdv; do
+            brew bump --no-fork --open-pr "$TAP_NAME/$package"
+          done
 
   bump-optcgsim:
     name: Bump optcgsim (non-GitHub)
@@ -146,6 +150,63 @@ jobs:
             echo "Retrying without label (autobump label may not exist yet)..."
             gh pr create --title "optcgsim ${{ steps.update.outputs.version }}" --body "$BODY"
           fi
+
+  bump-arch-formulae:
+    name: Bump ${{ matrix.formula }}
+    runs-on: macos-14
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        formula: [qwen-code, maki]
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout tap
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0 (Node 24, pinned)
+        with:
+          persist-credentials: true
+          fetch-depth: 0
+      - name: Set up Homebrew
+        uses: Homebrew/actions/setup-homebrew@8f3d1ec8a696b3b9d9a6c3696b6c73033cab69e4 # 2026.08.14.1
+      - name: Check for update
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ./scripts/update-arch-formula.sh "${{ matrix.formula }}" --dry-run 2>&1 | tee /tmp/arch-plan.txt
+          if grep -q 'already up to date' /tmp/arch-plan.txt; then
+            echo 'needed=false' >> "$GITHUB_OUTPUT"
+          else
+            echo 'needed=true' >> "$GITHUB_OUTPUT"
+          fi
+      - name: Update formula
+        if: steps.check.outputs.needed == 'true'
+        id: update
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ./scripts/update-arch-formula.sh "${{ matrix.formula }}"
+          brew style "Formula/${{ matrix.formula }}.rb"
+          ruby -c "Formula/${{ matrix.formula }}.rb"
+          version="$(sed -n 's/^    version "\([^"]*\)"$/\1/p' "Formula/${{ matrix.formula }}.rb" | head -1)"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - name: Set up git
+        if: steps.check.outputs.needed == 'true'
+        uses: Homebrew/actions/git-user-config@8f3d1ec8a696b3b9d9a6c3696b6c73033cab69e4 # 2026.08.14.1
+      - name: Create pull request
+        if: steps.check.outputs.needed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          branch="bump-${{ matrix.formula }}-${{ steps.update.outputs.version }}"
+          if git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then exit 0; fi
+          git checkout -b "$branch"
+          git add "Formula/${{ matrix.formula }}.rb"
+          git commit -m "${{ matrix.formula }} ${{ steps.update.outputs.version }}"
+          git push origin "$branch"
+          gh pr create --title "${{ matrix.formula }} ${{ steps.update.outputs.version }}" --body "Automated architecture-aware bump via scripts/update-arch-formula.sh."
 
   bump-junie-local:
     name: Bump junie-local (pinned script)

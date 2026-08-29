@@ -22,6 +22,8 @@
 1. Inspect release metadata and choose the exact stable asset. Prefer `.zip`
    over `.dmg` for casks when both contain the same app.
 2. Pin the release version and a 64-character SHA-256 hash.
+   For formulas with separate architecture assets, pin each asset and use the
+   dedicated architecture-aware updater instead of generic `brew bump`.
 3. Use `scripts/add-cask.sh <owner>/<repo> --no-write` to preview GitHub casks.
    Pass `--asset`, `--version`, or `--app` when auto-detection is insufficient.
 4. If no checksum asset exists, download only the release artifact and run

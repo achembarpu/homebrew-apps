@@ -48,14 +48,17 @@ casks. Run `./scripts/add-cask.sh --help` for its options.
 
 - `autobump` — `brew bump --no-fork --open-pr` for every `livecheck`-enabled
   cask/formula (`clearly`, `junie`, `localvoxtral`, `mac-dictate-anywhere`,
-  `mowglii-mdv`, `nativ`, `prime-agent`, `qwen-code`, `maki`, `tqbf-mdv`).
-  One PR per outdated package, de-duplicated against
+  `mowglii-mdv`, `nativ`, `prime-agent`, `tqbf-mdv`). `qwen-code` and `maki`
+  use `no_autobump!` because Homebrew's generic bump parser cannot rewrite
+  architecture-specific URL stanzas. One PR per outdated package, de-duplicated against
   open PRs.
 - `bump-optcgsim` — runs `scripts/update-optcgsim.sh` for the Dropbox-hosted
   cask that has no `livecheck`.
 - `bump-junie-local` — runs `scripts/update-junie-local.sh` for the
   commit-pinned `junie-local` formula that has `livecheck skip`; version
   authority is the latest commit touching `local/install.sh`.
+- `bump-arch-formulae` — runs `scripts/update-arch-formula.sh` for `qwen-code`
+  and `maki`, which each have architecture-specific release assets.
 
 No separate lint CI exists. Autobump validates its own edits; for hand-made
 bumps run `brew style` + `brew audit` locally as in Verification before

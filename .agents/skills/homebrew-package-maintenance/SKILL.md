@@ -32,3 +32,6 @@ verification workflow. Use the repository `AGENTS.md` for non-negotiable rules.
 
 The complete guide lives in [`references/guide.md`](references/guide.md). Load
 only the Item you need — grep for `### Item N` or a `#tag` to jump directly.
+
+For formulae with conditional architecture URLs, use
+`scripts/update-arch-formula.sh <formula> --dry-run` before a full update.
