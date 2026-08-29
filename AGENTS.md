@@ -74,6 +74,6 @@ committing.
 
 ## Scope
 
-- Casks wrap GUI apps from GitHub releases with `.zip` (preferred) or `.dmg` assets that contain a `.app` bundle. No pkg installers, no non-GitHub hosts.
+- Casks wrap GUI apps from GitHub releases with `.zip` (preferred) or `.dmg` assets that contain a `.app` bundle. The documented non-GitHub exception is `mowglii-mdv`, which uses Mowglii's pinned S3 DMG and Sparkle appcast.
 - Formulas wrap CLI tools and scripts that do not contain a `.app` bundle. Each formula pins an upstream artifact with `version` + `sha256`, no live fetches, no vendored binaries unless the build is from source. Use a GitHub release asset where available; the documented exceptions are `junie-local` (a pinned raw upstream script), `optcgsim` (a site-hosted app archive), and `prime-agent` (an npm tarball whose declared dependencies are resolved during the build). See `junie-local` for a script wrapper and `prime-agent` for an npm tarball pattern.
 - Uninstall runs `brew uninstall --cask --zap <name>` for casks (data paths come from the cask's `zap`) and `brew uninstall <name>` for formulae.

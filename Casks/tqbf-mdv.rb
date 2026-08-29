@@ -1,4 +1,4 @@
-cask "mdv" do
+cask "tqbf-mdv" do
   version "1.5.1"
   sha256 "c5d305be125f256ced5aed92d492741e6f3b94d249ba0e6da1545dc1477e95c2"
 
