@@ -45,6 +45,7 @@ user data manually using the command in the formula's caveats.
 | `mac-dictate-anywhere` | On-device voice dictation for any macOS app (universal, macOS 14+) | Developer ID signed and notarized; requires Microphone and Accessibility permissions. Shared FluidAudio speech models are not removed by `zap`. |
 | `nativ` | Local AI workspace for running MLX models natively on Apple silicon (macOS 26+, arm64) | Developer ID signed and notarized; no `postflight` needed. Models download into the shared Hugging Face cache, which `zap` leaves alone. |
 | `optcgsim` | Unofficial practice tool for the One Piece Card Game (universal Mac build) | Ad-hoc signed, not notarized; the cask clears quarantine and re-signs in `postflight`. Pins the site's base build (1.42c); newer versions arrive via the in-app auto-patcher. |
+| `writer-computer` | Native Markdown writing environment (Apple Silicon, macOS 10.15+) | Developer ID signed and notarized; uses the pinned GitHub DMG. App data is removed by `zap`. |
 
 ## Formulas
 
@@ -52,8 +53,8 @@ user data manually using the command in the formula's caveats.
 | --- | --- | --- |
 | `junie-local` | `junie-local-setup` command for the optional local model of the `junie` cask (JetBrains MLX engine + Qwen weights) | Vendored verbatim at a pinned upstream revision — no curl pipes. Upstream hard-gates: Apple M5+, >=40 GB RAM, macOS 26+. Downloads land in ~/.local/share/junie-local, outside brew. |
 | `prime-agent` | Self-improving coding and research agent | Node.js formula using the pinned GitHub release package. Requires Node.js 22; npm dependencies are installed into the formula keg. User data under ~/.prime/agent is not removed on uninstall. |
-| `qwen-code` | Open-source AI coding agent for the terminal (Apple Silicon & Intel, macOS) | Uses Qwen Code's pinned standalone macOS release and bundled Node.js runtime. User configuration is not removed on uninstall. |
-| `maki` | Efficient AI coding agent with Lua plugins (Apple Silicon & Intel, macOS) | Uses Maki's pinned native macOS release. User configuration and sessions are not removed on uninstall. |
+| `qwen-code` | Open-source AI coding agent for the terminal (Apple Silicon & Intel, macOS) | Uses Qwen Code's pinned standalone macOS release and bundled Node.js runtime. `scripts/update-arch-formula.sh` updates both architecture assets. User configuration is not removed on uninstall. |
+| `maki` | Efficient AI coding agent with Lua plugins (Apple Silicon & Intel, macOS) | Uses Maki's pinned native macOS release. `scripts/update-arch-formula.sh` updates both architecture assets. User configuration and sessions are not removed on uninstall. |
 
 ## Adding a cask or formula
 
@@ -102,10 +103,10 @@ the raw file, recomputes `sha256`, and rewrites `url`/`version`/`sha256`.
 `.github/workflows/autobump.yml` runs daily at 06:17 UTC and on
 `workflow_dispatch`:
 
-- `autobump` — `brew bump --no-fork --open-pr --tap=achembarpu/tap` for every
+- `autobump` — runs `brew bump --no-fork --open-pr <package>` for every
   cask and formula that defines a `livecheck` (`clearly`, `junie`,
   `localvoxtral`, `mac-dictate-anywhere`, `mowglii-mdv`, `nativ`,
-  `prime-agent`, `qwen-code`, `maki`, `tqbf-mdv`). Each outdated package gets its
+  `prime-agent`, `tqbf-mdv`). Each automated package gets its
   own PR. The job de-duplicates against open PRs and runs `brew audit` and
   `brew style` inline.
 
@@ -114,6 +115,10 @@ the raw file, recomputes `sha256`, and rewrites `url`/`version`/`sha256`.
 
 - `bump-junie-local` — runs `scripts/update-junie-local.sh` (see above) and
   opens a PR when the pinned SHA differs.
+
+- `bump-arch-formulae` — runs `scripts/update-arch-formula.sh` for `qwen-code`
+  and `maki`, downloading and hashing both macOS architecture assets before it
+  opens one PR per formula.
 
 There is no separate `brew style`/`brew audit` CI job. Autobump validates its
 own changes; for manual bumps, verify locally with `brew style` and
