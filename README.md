@@ -46,6 +46,8 @@ user data manually using the command in the formula's caveats.
 | `nativ` | Local AI workspace for running MLX models natively on Apple silicon (macOS 26+, arm64) | Developer ID signed and notarized; no `postflight` needed. Models download into the shared Hugging Face cache, which `zap` leaves alone. |
 | `optcgsim` | Unofficial practice tool for the One Piece Card Game (universal Mac build) | Ad-hoc signed, not notarized; the cask clears quarantine and re-signs in `postflight`. Pins the site's base build (1.42c); newer versions arrive via the in-app auto-patcher. |
 | `podium` | Multi-agent orchestrator for coding agents (Apple Silicon & Intel, macOS 11+) | Developer ID signed and notarized; requires agent CLIs to be installed and authenticated separately. Podium application data is removed by `zap`. |
+| `superset` | Agentic IDE for orchestrating coding agents (Apple Silicon & Intel, macOS 12+) | Developer ID signed and notarized; uses architecture-specific GitHub release archives. Superset application data is removed by `zap`. |
+| `tuicommander` | AI-native IDE for orchestrating coding agents (Apple Silicon, macOS 10.13+) | Developer ID signed and notarized; the current macOS release is Apple Silicon only. Application data is removed by `zap`. |
 | `writer-computer` | Native Markdown writing environment (Apple Silicon, macOS 10.15+) | Developer ID signed and notarized; uses the pinned GitHub DMG. App data is removed by `zap`. |
 
 ## Formulas
@@ -103,6 +105,10 @@ the raw file, recomputes `sha256`, and rewrites `url`/`version`/`sha256`.
 
 `.github/workflows/autobump.yml` runs daily at 06:17 UTC and on
 `workflow_dispatch`:
+
+The workflow requires the `HOMEBREW_GITHUB_API_TOKEN` repository secret. Use a
+repository-scoped GitHub token because Homebrew's PR helper cannot use the
+default Actions `GITHUB_TOKEN`.
 
 - `autobump` — runs `brew bump --no-fork --open-pr <package>` for every
   cask and formula that defines a `livecheck` (`clearly`, `junie`,

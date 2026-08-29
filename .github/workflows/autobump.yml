@@ -45,6 +45,8 @@ jobs:
       # rewrites version/sha256/url in place, runs `brew audit`/`brew style`,
       # de-duplicates against open PRs, and opens one PR per outdated
       # package with --no-fork (branch pushed directly to this repo).
+      # HOMEBREW_GITHUB_API_TOKEN must be a repository-scoped PAT. The default
+      # Actions GITHUB_TOKEN has no API token scopes for Homebrew's PR helper.
       #
       # Excluded automatically (handled by dedicated jobs):
       #   - junie-local: livecheck skip (vendored commit-pin, see bump-junie-local)
@@ -52,7 +54,7 @@ jobs:
       #   - qwen-code/maki: no_autobump! (architecture-specific URLs)
       - name: Bump outdated packages
         env:
-          HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.HOMEBREW_GITHUB_API_TOKEN }}
           HOMEBREW_GIT_COMMITTER_NAME: ${{ steps.git_setup.outputs.name }}
           HOMEBREW_GIT_COMMITTER_EMAIL: ${{ steps.git_setup.outputs.email }}
           TAP_NAME: ${{ steps.setup-homebrew.outputs.tap-name }}
@@ -127,7 +129,7 @@ jobs:
       - name: Create pull request
         if: steps.check.outputs.needed == 'true' && steps.update.outputs.changed == 'true'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.HOMEBREW_GITHUB_API_TOKEN }}
         run: |
           BRANCH="bump-optcgsim-${{ steps.update.outputs.version }}"
           if git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null 2>&1; then
@@ -173,7 +175,7 @@ jobs:
       - name: Check for update
         id: check
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.HOMEBREW_GITHUB_API_TOKEN }}
         run: |
           ./scripts/update-arch-formula.sh "${{ matrix.formula }}" --dry-run 2>&1 | tee /tmp/arch-plan.txt
           if grep -q 'already up to date' /tmp/arch-plan.txt; then
@@ -185,7 +187,7 @@ jobs:
         if: steps.check.outputs.needed == 'true'
         id: update
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.HOMEBREW_GITHUB_API_TOKEN }}
         run: |
           ./scripts/update-arch-formula.sh "${{ matrix.formula }}"
           brew style "Formula/${{ matrix.formula }}.rb"
@@ -198,7 +200,7 @@ jobs:
       - name: Create pull request
         if: steps.check.outputs.needed == 'true'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.HOMEBREW_GITHUB_API_TOKEN }}
         run: |
           branch="bump-${{ matrix.formula }}-${{ steps.update.outputs.version }}"
           if git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then exit 0; fi
@@ -228,8 +230,8 @@ jobs:
       - name: Check for junie-local update
         id: check
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.HOMEBREW_GITHUB_API_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.HOMEBREW_GITHUB_API_TOKEN }}
         run: |
           set +x
           echo "Checking latest commit touching local/install.sh..."
@@ -254,8 +256,8 @@ jobs:
         if: steps.check.outputs.needed == 'true'
         id: update
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.HOMEBREW_GITHUB_API_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.HOMEBREW_GITHUB_API_TOKEN }}
         run: |
           ./scripts/update-junie-local.sh 2>&1 | tee /tmp/junie-local-update.txt
           cat /tmp/junie-local-update.txt >> "$GITHUB_STEP_SUMMARY"
@@ -282,7 +284,7 @@ jobs:
       - name: Create pull request
         if: steps.check.outputs.needed == 'true' && steps.update.outputs.changed == 'true'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.HOMEBREW_GITHUB_API_TOKEN }}
         run: |
           BRANCH="bump-junie-local-${{ steps.update.outputs.version }}"
           if git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null 2>&1; then

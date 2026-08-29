@@ -46,6 +46,10 @@ casks. Run `./scripts/add-cask.sh --help` for its options.
 `.github/workflows/autobump.yml` runs daily at 06:17 UTC and on
 `workflow_dispatch`:
 
+- Configure the `HOMEBREW_GITHUB_API_TOKEN` repository secret with a
+  repository-scoped GitHub token. The Actions `GITHUB_TOKEN` can push branches
+  but does not provide the token scope required by Homebrew's `--open-pr` helper.
+
 - `autobump` — `brew bump --no-fork --open-pr` for every `livecheck`-enabled
   cask/formula (`clearly`, `junie`, `localvoxtral`, `mac-dictate-anywhere`,
   `mowglii-mdv`, `nativ`, `prime-agent`, `tqbf-mdv`). `qwen-code` and `maki`
