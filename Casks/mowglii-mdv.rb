@@ -2,7 +2,7 @@ cask "mowglii-mdv" do
   version "1.1.13"
   sha256 "37386b21e7f031730c2eab6b588a50ea1e6ba1e5cfab44ed255212014b585383"
 
-  url "https://mowglii.s3.us-east-1.amazonaws.com/mdv/MDV-143-1.1.13.dmg"
+  url "https://mowglii.s3.us-east-1.amazonaws.com/mdv/MDV-143-#{version}.dmg"
   name "MDV"
   desc "Native Markdown viewer with Quick Look and a command-line tool"
   homepage "https://www.mowglii.com/mdv/"
