@@ -9,7 +9,7 @@ cask "mowglii-mdv" do
 
   livecheck do
     url "https://mowglii.s3.us-east-1.amazonaws.com/mdv/appcast.xml"
-    strategy :sparkle
+    strategy :sparkle, &:short_version
   end
 
   depends_on macos: :ventura
