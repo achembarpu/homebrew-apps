@@ -39,8 +39,9 @@ jobs:
         uses: Homebrew/actions/git-user-config@8f3d1ec8a696b3b9d9a6c3696b6c73033cab69e4 # 2026.08.14.1
 
       # brew bump checks every cask/formula in the tap that defines a
-      # livecheck block (junie, mdv, localvoxtral, nativ, prime-agent,
-      # qwen-code, maki). It downloads the new artifact, recomputes sha256,
+      # livecheck block (clearly, junie, localvoxtral, mac-dictate-anywhere,
+      # mowglii-mdv, nativ, prime-agent, qwen-code, maki, tqbf-mdv). It
+      # downloads the new artifact, recomputes sha256,
       # rewrites version/sha256/url in place, runs `brew audit`/`brew style`,
       # de-duplicates against open PRs, and opens one PR per outdated
       # package with --no-fork (branch pushed directly to this repo).

@@ -47,8 +47,9 @@ casks. Run `./scripts/add-cask.sh --help` for its options.
 `workflow_dispatch`:
 
 - `autobump` — `brew bump --no-fork --open-pr` for every `livecheck`-enabled
-  cask/formula (`clearly`, `junie`, `mowglii-mdv`, `tqbf-mdv`, `localvoxtral`,
-  `nativ`, `prime-agent`, `qwen-code`, `maki`). One PR per outdated package, de-duplicated against
+  cask/formula (`clearly`, `junie`, `localvoxtral`, `mac-dictate-anywhere`,
+  `mowglii-mdv`, `nativ`, `prime-agent`, `qwen-code`, `maki`, `tqbf-mdv`).
+  One PR per outdated package, de-duplicated against
   open PRs.
 - `bump-optcgsim` — runs `scripts/update-optcgsim.sh` for the Dropbox-hosted
   cask that has no `livecheck`.

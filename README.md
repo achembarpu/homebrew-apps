@@ -104,8 +104,8 @@ the raw file, recomputes `sha256`, and rewrites `url`/`version`/`sha256`.
 
 - `autobump` — `brew bump --no-fork --open-pr --tap=achembarpu/tap` for every
   cask and formula that defines a `livecheck` (`clearly`, `junie`,
-  `mowglii-mdv`, `tqbf-mdv`, `localvoxtral`, `nativ`, `prime-agent`,
-  `qwen-code`, `maki`). Each outdated package gets its
+  `localvoxtral`, `mac-dictate-anywhere`, `mowglii-mdv`, `nativ`,
+  `prime-agent`, `qwen-code`, `maki`, `tqbf-mdv`). Each outdated package gets its
   own PR. The job de-duplicates against open PRs and runs `brew audit` and
   `brew style` inline.
 
