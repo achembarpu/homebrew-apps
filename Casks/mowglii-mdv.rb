@@ -1,15 +1,17 @@
 cask "mowglii-mdv" do
-  version "1.1.13"
-  sha256 "37386b21e7f031730c2eab6b588a50ea1e6ba1e5cfab44ed255212014b585383"
+  version "1.2.0,144"
+  sha256 "722a5306ade2e58333166c70ac1380881deac6f9ae617a1fe2c448f6d06d873e"
 
-  url "https://mowglii.s3.us-east-1.amazonaws.com/mdv/MDV-143-#{version}.dmg"
+  url "https://mowglii.s3.us-east-1.amazonaws.com/mdv/MDV-#{version.csv.second}-#{version.csv.first}.dmg"
   name "MDV"
   desc "Native Markdown viewer with Quick Look and a command-line tool"
   homepage "https://www.mowglii.com/mdv/"
 
   livecheck do
     url "https://mowglii.s3.us-east-1.amazonaws.com/mdv/appcast.xml"
-    strategy :sparkle, &:short_version
+    strategy :sparkle do |item|
+      "#{item.short_version},#{item.version}"
+    end
   end
 
   depends_on macos: :ventura
