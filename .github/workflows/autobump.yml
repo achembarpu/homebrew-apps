@@ -161,8 +161,18 @@ jobs:
         if: steps.check.outputs.needed == 'true'
         id: update
         run: |
+          set +e
           ./scripts/update-optcgsim.sh 2>&1 | tee /tmp/optcgsim-update.txt
+          update_status="${PIPESTATUS[0]}"
+          set -e
           cat /tmp/optcgsim-update.txt >> "$GITHUB_STEP_SUMMARY"
+          if [ "$update_status" -eq 75 ]; then
+            echo "::warning::optcgsim mirrors are temporarily unavailable; skipping this bump"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          elif [ "$update_status" -ne 0 ]; then
+            exit "$update_status"
+          fi
           new_version="$(sed -n 's/^  version "\([^"]*\)"/\1/p' Casks/optcgsim.rb)"
           if [ -z "$new_version" ]; then
             echo "::error::Could not read new version from Casks/optcgsim.rb"

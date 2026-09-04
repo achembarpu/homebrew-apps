@@ -172,16 +172,57 @@ fi
 ARCHIVE="$TMP_DIR/optcgsim.zip"
 download_zip() {
   local url="$1"
-  curl -fL --retry 3 "$url" -o "$ARCHIVE" || return 1
-  unzip -tq "$ARCHIVE" >/dev/null 2>&1
+  DOWNLOAD_REASON=""
+  if ! curl -fL --retry 3 "$url" -o "$ARCHIVE"; then
+    DOWNLOAD_REASON="request failed"
+    return 1
+  fi
+  if ! unzip -tq "$ARCHIVE" >/dev/null 2>&1; then
+    DOWNLOAD_REASON="response was not a ZIP archive"
+    local title
+    title="$(python3 - "$ARCHIVE" <<'PY'
+from html.parser import HTMLParser
+import sys
+
+class TitleParser(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.in_title = False
+        self.title = ""
+
+    def handle_starttag(self, tag, attrs):
+        self.in_title |= tag.lower() == "title"
+
+    def handle_endtag(self, tag):
+        self.in_title &= tag.lower() != "title"
+
+    def handle_data(self, data):
+        if self.in_title:
+            self.title += data
+
+parser = TitleParser()
+with open(sys.argv[1], encoding="utf-8", errors="replace") as response:
+    parser.feed(response.read(262144))
+print(" ".join(parser.title.split()))
+PY
+    )" || true
+    [ -n "$title" ] && DOWNLOAD_REASON="$DOWNLOAD_REASON (title: $title)"
+    return 1
+  fi
 }
 
 printf 'Downloading %s (%s)...\n' "$SCRAPED_URL" "$ZIP_HINT" >&2
 SOURCE_URL="$NEW_URL"
 if ! download_zip "$SCRAPED_URL"; then
-  printf 'Dropbox download was not a valid ZIP; trying Google Drive mirror...\n' >&2
+  DROPBOX_REASON="$DOWNLOAD_REASON"
+  printf 'Dropbox unavailable: %s\n' "$DROPBOX_REASON" >&2
+  printf 'Trying Google Drive mirror...\n' >&2
   SOURCE_URL="$DRIVE_URL"
-  download_zip "$DRIVE_URL" || die "Dropbox and Google Drive downloads were not valid ZIP archives"
+  if ! download_zip "$DRIVE_URL"; then
+    printf 'Google Drive unavailable: %s\n' "$DOWNLOAD_REASON" >&2
+    printf 'No valid Mac ZIP was downloaded; the cask was not changed.\n' >&2
+    exit 75
+  fi
 fi
 printf 'Computing SHA-256...\n' >&2
 SHA256="$(shasum -a 256 "$ARCHIVE" | awk '{ print $1 }')"
