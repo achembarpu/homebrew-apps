@@ -4,13 +4,13 @@ set -euo pipefail
 # Update the optcgsim cask (Casks/optcgsim.rb) from optcgsim.com.
 #
 # optcgsim has no GitHub releases, no livecheck, and no published checksums:
-# the app ships from a Dropbox link on https://optcgsim.com/ whose filename
-# segment is VESTIGIAL (it currently says 1_30d_Mac.zip while the zip holds
-# the 1.42c build). The version authority is the site's WordPress RSS feed
-# (https://optcgsim.com/feed/), the URL comes from scraping the Mac download
-# link, and the sha256 is computed from a fresh download (~711 MiB). The
-# script aborts rather than rewrite the cask if the downloaded binary does
-# not confirm the feed's version or the <version>_Mac/ folder naming changed.
+# the Mac Dropbox link on https://optcgsim.com/ and a Google Drive mirror. The
+# Dropbox filename segment is VESTIGIAL (it currently says 1_30d_Mac.zip while
+# the zip holds the 1.42c build). The version authority is the site's WordPress
+# RSS feed (https://optcgsim.com/feed/), the URLs come from scraping the Mac
+# download section, and the sha256 is computed from a fresh download (~711 MiB).
+# The script aborts rather than rewrite the cask if neither download confirms
+# the feed's version or the <version>_Mac/ folder naming changed.
 #
 #   ./scripts/update-optcgsim.sh            # full bump: download, verify, rewrite
 #   ./scripts/update-optcgsim.sh --dry-run  # plan only, no download/no write
@@ -113,19 +113,30 @@ else:
         sys.exit(1)
     version = vm.group(0)
 
-# URL: the Mac Dropbox link in the #download section (exactly one Mac link).
-mm = re.search(r'https://www\.dropbox\.com/scl/fi/[^"]*Mac\.zip[^"]*', page)
+# URLs: the Mac Dropbox and Google Drive links in the Mac download section.
+mac_section = re.search(r'aria-labelledby="mac".*?(?=aria-labelledby="[^"]+"|\Z)', page, re.S)
+if not mac_section:
+    sys.stderr.write("Error: no Mac download section found on %s\n" % sys.argv[2])
+    sys.exit(1)
+mac_page = mac_section.group(0)
+mm = re.search(r'https://www\.dropbox\.com/scl/fi/[^\"]*Mac\.zip[^\"]*', mac_page)
 if not mm:
     sys.stderr.write("Error: no Mac Dropbox link (https://www.dropbox.com/scl/fi/...Mac.zip) found on %s\n" % sys.argv[2])
     sys.exit(1)
-url = mm.group(0).replace("&#038;", "&").replace("&amp;", "&")
+dropbox_url = mm.group(0).replace("&#038;", "&").replace("&amp;", "&")
+gm = re.search(r'https://drive\.google\.com/file/d/([A-Za-z0-9_-]+)/[^"<> ]*', mac_page)
+if not gm:
+    sys.stderr.write("Error: no Mac Google Drive mirror found on %s\n" % sys.argv[2])
+    sys.exit(1)
+drive_url = "https://drive.usercontent.google.com/download?id=%s&export=download&confirm=t" % gm.group(1)
 
-print("%s\t%s" % (version, url))
+print("%s\t%s\t%s" % (version, dropbox_url, drive_url))
 PY
 )"
-IFS=$'\t' read -r TARGET_VERSION SCRAPED_URL <<<"$meta"
+IFS=$'\t' read -r TARGET_VERSION SCRAPED_URL DRIVE_URL <<<"$meta"
 [ -n "$TARGET_VERSION" ] || die "could not determine the target version from $FEED_URL"
 [ -n "$SCRAPED_URL" ] || die "could not find the Mac Dropbox link on $PAGE_URL"
+[ -n "$DRIVE_URL" ] || die "could not find the Mac Google Drive mirror on $PAGE_URL"
 
 # --- rebuild the cask URL ---------------------------------------------------------
 # Keep the scraped file-id/rlkey/st/dl tokens verbatim; replace only the
@@ -134,10 +145,6 @@ IFS=$'\t' read -r TARGET_VERSION SCRAPED_URL <<<"$meta"
 NEW_FILENAME='1_#{version.tr(".", "_")}_Mac.zip'
 NEW_URL="$(printf '%s\n' "$SCRAPED_URL" | sed "s|[^/?]*Mac\.zip|${NEW_FILENAME}|")"
 [ "$NEW_URL" != "$SCRAPED_URL" ] || die "could not rebuild the Dropbox URL (no Mac.zip filename segment): $SCRAPED_URL"
-# Escape sed's replacement metacharacter: the Dropbox query string always
-# contains '&', which sed would otherwise expand to the whole match.
-NEW_URL_SED="${NEW_URL//&/\\&}"
-
 # --- plan / early exits ------------------------------------------------------------
 if [ "$DRY_RUN" = "1" ]; then
   if [ "$TARGET_VERSION" = "$CURRENT_VERSION" ]; then
@@ -147,7 +154,8 @@ if [ "$DRY_RUN" = "1" ]; then
     printf 'Plan:\n'
     printf '  old version:     %s\n' "$CURRENT_VERSION"
     printf '  new version:     %s\n' "$TARGET_VERSION"
-    printf '  url:             %s\n' "$NEW_URL"
+    printf '  primary url:     %s\n' "$NEW_URL"
+    printf '  fallback url:    %s\n' "$DRIVE_URL"
     printf '  download needed: yes (%s)\n' "$ZIP_HINT"
     printf '  after download:  verify the binary version string and the <%s_Mac/OPTCGSim.app> zip entry,\n' "$TARGET_VERSION"
     printf '                   then rewrite version/sha256/url in Casks/optcgsim.rb\n'
@@ -162,10 +170,18 @@ fi
 
 # --- download and checksum ------------------------------------------------------------
 ARCHIVE="$TMP_DIR/optcgsim.zip"
+download_zip() {
+  local url="$1"
+  curl -fL --retry 3 "$url" -o "$ARCHIVE" || return 1
+  unzip -tq "$ARCHIVE" >/dev/null 2>&1
+}
+
 printf 'Downloading %s (%s)...\n' "$SCRAPED_URL" "$ZIP_HINT" >&2
-curl -fL --retry 3 "$SCRAPED_URL" -o "$ARCHIVE" || die "download failed: $SCRAPED_URL"
-if ! unzip -tq "$ARCHIVE" >/dev/null 2>&1; then
-  die "downloaded optcgsim response is not a ZIP archive; the Dropbox link may be temporarily disabled"
+SOURCE_URL="$NEW_URL"
+if ! download_zip "$SCRAPED_URL"; then
+  printf 'Dropbox download was not a valid ZIP; trying Google Drive mirror...\n' >&2
+  SOURCE_URL="$DRIVE_URL"
+  download_zip "$DRIVE_URL" || die "Dropbox and Google Drive downloads were not valid ZIP archives"
 fi
 printf 'Computing SHA-256...\n' >&2
 SHA256="$(shasum -a 256 "$ARCHIVE" | awk '{ print $1 }')"
@@ -207,7 +223,7 @@ printf 'Updating %s: version %s -> %s\n' "$CASK_FILE" "$CURRENT_VERSION" "$TARGE
 sed -i.bak \
   -e 's|^\(  version "\)[^"]*\("\)|\1'"${TARGET_VERSION}"'\2|' \
   -e 's|^\(  sha256 "\)[^"]*\("\)|\1'"${SHA256}"'\2|' \
-  -e 's|^\(  url "\).*\(",$\)|\1'"${NEW_URL_SED}"'\2|' \
+  -e 's|^\(  url "\).*\(",$\)|\1'"${SOURCE_URL//&/\\&}"'\2|' \
   "$CASK_FILE"
 rm -f "${CASK_FILE}.bak"
 
