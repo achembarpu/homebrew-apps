@@ -77,7 +77,7 @@ jobs:
               formula_file="$tap_root/Formula/prime-agent.rb"
               current="$(sed -n 's/^  version "\([^"]*\)"$/\1/p' "$formula_file")"
               url="$(sed -n 's/^  url "\([^"]*\)"$/\1/p' "$formula_file")"
-              new_url="${url/$current/$latest}"
+              new_url="${url//$current/$latest}"
               archive="$(mktemp)"
               trap 'rm -f "$archive"' EXIT
               curl -fsSL --retry 3 "$new_url" -o "$archive"

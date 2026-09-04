@@ -164,6 +164,9 @@ fi
 ARCHIVE="$TMP_DIR/optcgsim.zip"
 printf 'Downloading %s (%s)...\n' "$SCRAPED_URL" "$ZIP_HINT" >&2
 curl -fL --retry 3 "$SCRAPED_URL" -o "$ARCHIVE" || die "download failed: $SCRAPED_URL"
+if ! unzip -tq "$ARCHIVE" >/dev/null 2>&1; then
+  die "downloaded optcgsim response is not a ZIP archive; the Dropbox link may be temporarily disabled"
+fi
 printf 'Computing SHA-256...\n' >&2
 SHA256="$(shasum -a 256 "$ARCHIVE" | awk '{ print $1 }')"
 [[ "$SHA256" =~ ^[[:xdigit:]]{64}$ ]] || die "could not compute sha256 of $ARCHIVE"
