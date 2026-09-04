@@ -38,9 +38,19 @@ jobs:
         id: git_setup
         uses: Homebrew/actions/git-user-config@8f3d1ec8a696b3b9d9a6c3696b6c73033cab69e4 # 2026.08.14.1
 
-      # brew bump checks every cask/formula in the tap that defines a
-      # livecheck block (clearly, junie, localvoxtral, mac-dictate-anywhere,
-      # mowglii-mdv, nativ, prime-agent, tqbf-mdv). It
+      - name: Configure git authentication
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_GITHUB_API_TOKEN }}
+          TAP_NAME: ${{ steps.setup-homebrew.outputs.tap-name }}
+        run: |
+          tap_root="$(brew --repository "$TAP_NAME")"
+          auth="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64)"
+          git -C "$tap_root" config --local http.https://github.com/.extraheader "AUTHORIZATION: basic $auth"
+
+      # brew bump checks each livecheck-enabled package except prime-agent
+      # (clearly, junie, localvoxtral, mac-dictate-anywhere, mowglii-mdv,
+      # nativ, tqbf-mdv). The prime-agent release is updated inline because
+      # its explicit version stanza requires a manual URL/version/sha256 bump. The generic path
       # downloads the new artifact, recomputes sha256,
       # rewrites version/sha256/url in place, runs `brew audit`/`brew style`,
       # de-duplicates against open PRs, and opens one PR per outdated
@@ -54,13 +64,51 @@ jobs:
       #   - qwen-code/maki: no_autobump! (architecture-specific URLs)
       - name: Bump outdated packages
         env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_GITHUB_API_TOKEN }}
           HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.HOMEBREW_GITHUB_API_TOKEN }}
           HOMEBREW_GIT_COMMITTER_NAME: ${{ steps.git_setup.outputs.name }}
           HOMEBREW_GIT_COMMITTER_EMAIL: ${{ steps.git_setup.outputs.email }}
           TAP_NAME: ${{ steps.setup-homebrew.outputs.tap-name }}
         run: |
-          for package in clearly junie localvoxtral mac-dictate-anywhere mowglii-mdv nativ prime-agent tqbf-mdv; do
-            brew bump --no-fork --open-pr "$TAP_NAME/$package"
+          for package in clearly junie localvoxtral mac-dictate-anywhere mowglii-mdv nativ tqbf-mdv prime-agent; do
+            if [ "$package" = "prime-agent" ]; then
+              latest="$(brew livecheck --json "$TAP_NAME/$package" | ruby -rjson -e 'puts JSON.parse(STDIN.read).first.fetch("version").fetch("latest")')"
+              tap_root="$(brew --repository "$TAP_NAME")"
+              formula_file="$tap_root/Formula/prime-agent.rb"
+              current="$(sed -n 's/^  version "\([^"]*\)"$/\1/p' "$formula_file")"
+              url="$(sed -n 's/^  url "\([^"]*\)"$/\1/p' "$formula_file")"
+              new_url="${url/$current/$latest}"
+              archive="$(mktemp)"
+              trap 'rm -f "$archive"' EXIT
+              curl -fsSL --retry 3 "$new_url" -o "$archive"
+              sha256="$(shasum -a 256 "$archive" | awk '{print $1}')"
+              URL="$new_url" LATEST="$latest" SHA256="$sha256" python3 - "$formula_file" <<'PY'
+          import os
+          import pathlib
+          import re
+          import sys
+
+          path = pathlib.Path(sys.argv[1])
+          text = path.read_text()
+          text = re.sub(r'(?m)^  url "[^"]*"$', f'  url "{os.environ["URL"]}"', text)
+          text = re.sub(r'(?m)^  version "[^"]*"$', f'  version "{os.environ["LATEST"]}"', text)
+          text = re.sub(r'(?m)^  sha256 "[^"]*"$', f'  sha256 "{os.environ["SHA256"]}"', text)
+          path.write_text(text)
+          PY
+              brew style "$formula_file"
+              branch="bump-prime-agent-$latest"
+              if git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
+                echo "Branch $branch already exists on remote, skipping"
+                continue
+              fi
+              git -C "$tap_root" checkout -b "$branch"
+              git -C "$tap_root" add Formula/prime-agent.rb
+              git -C "$tap_root" commit -m "prime-agent $latest"
+              git -C "$tap_root" push origin "$branch"
+              gh pr create --repo "$GITHUB_REPOSITORY" --title "prime-agent $latest" --body "Automated bump of prime-agent to $latest."
+            else
+              brew bump --no-fork --open-pr "$TAP_NAME/$package"
+            fi
           done
 
   bump-optcgsim:
@@ -79,6 +127,13 @@ jobs:
 
       - name: Set up Homebrew (for brew style/audit)
         uses: Homebrew/actions/setup-homebrew@8f3d1ec8a696b3b9d9a6c3696b6c73033cab69e4 # 2026.08.14.1
+
+      - name: Configure git authentication
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_GITHUB_API_TOKEN }}
+        run: |
+          auth="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64)"
+          git config --local http.https://github.com/.extraheader "AUTHORIZATION: basic $auth"
 
       - name: Check for optcgsim update
         id: check
@@ -172,6 +227,13 @@ jobs:
           fetch-depth: 0
       - name: Set up Homebrew
         uses: Homebrew/actions/setup-homebrew@8f3d1ec8a696b3b9d9a6c3696b6c73033cab69e4 # 2026.08.14.1
+
+      - name: Configure git authentication
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_GITHUB_API_TOKEN }}
+        run: |
+          auth="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64)"
+          git config --local http.https://github.com/.extraheader "AUTHORIZATION: basic $auth"
       - name: Check for update
         id: check
         env:
@@ -226,6 +288,13 @@ jobs:
 
       - name: Set up Homebrew (for brew style/audit)
         uses: Homebrew/actions/setup-homebrew@8f3d1ec8a696b3b9d9a6c3696b6c73033cab69e4 # 2026.08.14.1
+
+      - name: Configure git authentication
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_GITHUB_API_TOKEN }}
+        run: |
+          auth="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64)"
+          git config --local http.https://github.com/.extraheader "AUTHORIZATION: basic $auth"
 
       - name: Check for junie-local update
         id: check

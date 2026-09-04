@@ -110,12 +110,12 @@ The workflow requires the `HOMEBREW_GITHUB_API_TOKEN` repository secret. Use a
 repository-scoped GitHub token because Homebrew's PR helper cannot use the
 default Actions `GITHUB_TOKEN`.
 
-- `autobump` — runs `brew bump --no-fork --open-pr <package>` for every
-  cask and formula that defines a `livecheck` (`clearly`, `junie`,
-  `localvoxtral`, `mac-dictate-anywhere`, `mowglii-mdv`, `nativ`,
-  `prime-agent`, `tqbf-mdv`). Each automated package gets its
-  own PR. The job de-duplicates against open PRs and runs `brew audit` and
-  `brew style` inline.
+- `autobump` — runs `brew bump --no-fork --open-pr <package>` for each
+  livecheck-enabled cask and formula except `prime-agent`. The `prime-agent`
+  path downloads the release, recomputes `sha256`, rewrites its explicit
+  `url`/`version`/`sha256` stanzas, and opens its PR directly. Each automated
+  package gets its own PR. The job de-duplicates against open PRs and runs
+  `brew audit` and `brew style` inline.
 
 - `bump-optcgsim` — runs `scripts/update-optcgsim.sh` (see above) and opens a
   PR with `peter-evans/create-pull-request` when the RSS version differs.

@@ -213,8 +213,12 @@ STYLE_OK=1
 AUDIT_OK=1
 AUDIT_NOTE=""
 if [ -n "$TAP_CASK" ] && [ -f "$TAP_CASK" ]; then
-  printf 'Syncing cask to tap copy %s...\n' "$TAP_CASK" >&2
-  cp "$CASK_FILE" "$TAP_CASK"
+  if cmp -s "$CASK_FILE" "$TAP_CASK"; then
+    printf 'Cask already synced at %s.\n' "$TAP_CASK" >&2
+  else
+    printf 'Syncing cask to tap copy %s...\n' "$TAP_CASK" >&2
+    cp "$CASK_FILE" "$TAP_CASK"
+  fi
 else
   AUDIT_NOTE=" (audit needs the tap: brew tap achembarpu/tap)"
 fi
